@@ -1,0 +1,60 @@
+#Login to HPC
+
+#Load mini conda
+module load miniconda
+
+# (Run this ONCE — no need to repeat unless rebuilding)
+conda install -c bioconda sra-tools entrez-direct 
+conda create -n rnaseq_tools -c bioconda sra-tools entrez-direct
+
+# Run this to activate rna seq environment
+conda activate rnaseq_tools
+
+#make new directory to store files
+mdkir fastq_files
+cd fastq_files
+
+#get the SRA files from sequencing dataset of interest
+esearch -db sra -query SRP223536 | efetch -format runinfo | cut -d ',' -f 1 | grep SRR > SRR_Acc_List.txt 
+
+#get fastq files from the SRA
+cat SRR_Acc_List.txt | while read SRR; do
+>   echo "Downloading $SRR..."
+>   fasterq-dump --split-files "$SRR"
+> done
+
+
+____
+#!/bin/bash
+
+# -------------------------------
+# Step 1: Log in to HPC and load conda
+# -------------------------------
+module load miniconda
+conda activate rnaseq_tools  # <-- Created earlier, contains sra-tools + entrez-direct
+
+# -------------------------------
+# Step 2: Set up working directory
+# -------------------------------
+mkdir -p ~/projects/rnaseq_download/fastq_files
+cd ~/projects/rnaseq_download/fastq_files
+
+# -------------------------------
+# Step 3: Get SRR accession list from SRA Project (SRP)
+# -------------------------------
+echo "Fetching SRR accession list for SRP223536..."
+esearch -db sra -query SRP223536 | efetch -format runinfo | cut -d ',' -f 1 | grep SRR > SRR_Acc_List.txt
+
+# -------------------------------
+# Step 4: Download and convert .sra to .fastq files
+# -------------------------------
+echo "Starting FASTQ download with fasterq-dump..."
+
+cat SRR_Acc_List.txt | while read SRR; do
+    echo "[$(date)] Downloading $SRR..."
+    fasterq-dump --split-files "$SRR"
+    echo "[$(date)] Compressing $SRR fastq files..."
+    gzip ${SRR}_1.fastq ${SRR}_2.fastq
+done
+
+echo "Download complete!"
