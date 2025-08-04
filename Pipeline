@@ -74,8 +74,13 @@ echo "Download complete: $(ls fastq_files/*.fastq.gz | wc -l) fastq files found.
 
 #or?
 squeue --me
-cd logs/
 tail -f ~/palmer_scratch/RNAseq_download/logs/*.out
+
+wc -l SRR_Acc_List.txt
+ls *_1.fastq.gz | wc -l
+
+ls *_1.fastq.gz | sed 's/_1.fastq.gz//' | sort > downloaded.txt
+comm -23 <(sort SRR_Acc_List.txt) downloaded.txt > not_downloaded.txt
 
 # -------------------------------
 # Next steps:
