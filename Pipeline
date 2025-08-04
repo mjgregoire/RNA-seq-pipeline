@@ -1,5 +1,21 @@
-____
+_____
 #!/bin/bash
+
+# ----------------------------------------------
+# RNA-seq Pipeline Master Script (for SRP223536)
+# ----------------------------------------------
+# Purpose: Reproducible workflow to download raw FASTQ files from an SRA project
+# and perform RNA-seq analysis.
+#
+# Dataset: SRP223536
+# Total samples: 25 SRR files
+# Date started: 2025-08-04
+# HPC: Yale cluster (Guo lab)
+# Conda environment: rnaseq_tools (sra-tools, entrez-direct installed)
+# Scratch dir: ~/palmer_scratch/rnaseq_download/fastq_files
+# Download method: fasterq-dump + gzip compression
+# Script used: download_fastq.sh
+# Runtime (1 sample): ~1 hr 12 min (download + compression)
 
 # -------------------------------
 # Step 1: Log in to HPC and load conda
@@ -10,8 +26,8 @@ conda activate rnaseq_tools  # <-- Created earlier, contains sra-tools + entrez-
 # -------------------------------
 # Step 2: Set up working directory
 # -------------------------------
-mdkir ~/palmer_scratch/fastq_files #OR cleaner folders: mkdir -p ~/projects/rnaseq_download/fastq_files
-#cd ~/palmer_scratch/fastq_files #OR the cleaner folders: cd ~/projects/rnaseq_download/fastq_files
+mkdir ~/palmer_scratch/fastq_files #OR cleaner folders: mkdir -p ~/projects/rnaseq_download/fastq_files
+cd ~/palmer_scratch/fastq_files #OR the cleaner folders: cd ~/projects/rnaseq_download/fastq_files
 
 # -------------------------------
 # Step 3: Get SRR accession list from SRA Project (SRP)
@@ -21,15 +37,52 @@ echo "Fetching SRR accession list for SRP223536..."
 esearch -db sra -query SRP223536 | efetch -format runinfo | cut -d ',' -f 1 | grep SRR > SRR_Acc_List.txt
 
 # -------------------------------
-# Step 4: Download and convert .sra to .fastq files
+# Step 4: Run FASTQ download script
 # -------------------------------
+# Script downloads all SRR files and compresses them and converts .sra to .fastq files
 echo "Starting FASTQ download with fasterq-dump..."
+bash fastq_array.sh
 
-cat SRR_Acc_List.txt | while read SRR; do
-    echo "[$(date)] Downloading $SRR..."
-    fasterq-dump --split-files "$SRR"
-    echo "[$(date)] Compressing $SRR fastq files..."
+    #!/bin/bash
+    ###Run on day partition###
+    #SBATCH -p day
+    ###name job###
+    #SBATCH --job-name=fastq_array
+    ###request 1 GB memory###
+    #SBATCH --mem-per-cpu=1G
+    ###request 6 hours worth of time### #or might need more time depending on size and number of files
+    #SBATCH -t 6:00:00
+    ###create email trail###
+    #SBATCH --mail-type=ALL
+    #SBATCH --output=logs/fastq_%A_%a.out
+    #SBATCH --error=logs/fastq_%A_%a.err
+    #SBATCH --array=0-24     # Adjust if you have more or fewer SRRs
+    module load miniconda
+    conda activate rnaseq_tools
+    cd ~/palmer_scratch/rnaseq_download
+    SRR=$(sed -n "$((SLURM_ARRAY_TASK_ID+1))p" SRR_Acc_List.txt)
+    echo "[$(date)] Downloading $SRR"
+    fasterq-dump --split-files --threads 4 "$SRR"
     gzip ${SRR}_1.fastq ${SRR}_2.fastq
-done
 
-echo "Download complete!"
+# -------------------------------
+# Step 4: Verify output
+# -------------------------------
+# Optional: run ls or check file counts
+ls -lh fastq_files | grep '.fastq.gz'
+echo "Download complete: $(ls fastq_files/*.fastq.gz | wc -l) fastq files found."
+
+#or?
+squeue --me
+cd logs/
+tail -f ~/palmer_scratch/RNAseq_download/logs/*.out
+
+# -------------------------------
+# Next steps:
+# -------------------------------
+# - fastqc *.fastq.gz
+# - align with STAR or HISAT2
+# - quantify with featureCounts or Salmon
+# - downstream DE analysis with DESeq2 / edgeR
+
+echo "[$(date)] RNA-seq data download pipeline complete."
