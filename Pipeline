@@ -84,7 +84,8 @@ ls *_1.fastq.gz | sed 's/_1.fastq.gz//' | sort > downloaded.txt
 comm -23 <(sort SRR_Acc_List.txt) downloaded.txt > not_downloaded.txt
 
 # -------------------------------
-Step 5: FASTQC
+# Step 5: FASTQC
+# -------------------------------
 # run fastqc as as bash script
 echo "Starting FASTQC..."
 mkdir fastqc_results
@@ -123,6 +124,57 @@ multiqc .
 #chmod 600 ~/YaleSSHkey
 #chmod 700 ~/.ssh
 scp -i ~/YaleSSHkey mg2684@transfer-mccleary.ycrc.yale.edu:~/palmer_scratch/RNAseq_download/fastqc_results/multiqc_report.html ~/Downloads/
+
+# -------------------------------
+# Step 6: Trim and QC
+# -------------------------------
+echo "Staring trimming..."
+sbatch trim_fastp.sbatch.
+    #!/bin/bash
+    #SBATCH --job-name=fastp_trim
+    #SBATCH --output=fastp_trim.out
+    #SBATCH --error=fastp_trim.err
+    #SBATCH --time=02:00:00
+    #SBATCH --mem=16G
+    #SBATCH --cpus-per-task=4
+    #SBATCH --mail-user=michelle.gregoire@yale.edu  # Optional
+    #SBATCH --mail-type=END,FAIL
+
+    # Load modules or activate conda
+    module purge
+    module load miniconda
+    source activate your_fastp_env  # Replace with your conda env name that has fastp installed
+
+    # Define directories
+    IN_DIR=~/palmer_scratch/RNAseq_download
+    OUT_DIR=${IN_DIR}/trimmed_fastq
+    mkdir -p "$OUT_DIR"
+
+    # Trimming loop
+    for R1 in "$IN_DIR"/*_1.fastq.gz; do
+        BASE=$(basename "$R1" _1.fastq.gz)
+        R2="${IN_DIR}/${BASE}_2.fastq.gz"
+
+        echo "Trimming $BASE..."
+
+        fastp \
+          -i "$R1" \
+          -I "$R2" \
+          -o "$OUT_DIR/${BASE}_R1.trimmed.fastq.gz" \
+          -O "$OUT_DIR/${BASE}_R2.trimmed.fastq.gz" \
+          --detect_adapter_for_pe \
+          --cut_front \
+          --cut_tail \
+          --cut_window_size 4 \
+          --cut_mean_quality 20 \
+          --length_required 20 \
+          --thread 4 \
+          --html "$OUT_DIR/${BASE}_fastp.html" \
+          --json "$OUT_DIR/${BASE}_fastp.json"
+    done
+
+    echo "All trimming done."
+
 
 # -------------------------------
 # Next steps:
