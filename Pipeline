@@ -21,7 +21,8 @@ _____
 # Step 1: Log in to HPC and load conda
 # -------------------------------
 module load miniconda
-conda activate rnaseq_tools  # <-- Created earlier, contains sra-tools + entrez-direct, via: conda install -c bioconda sra-tools entrez-direct, then: conda create -n rnaseq_tools -c bioconda sra-tools entrez-direct
+conda activate rnaseq_tools  # <-- Created earlier, contains sra-tools + entrez-direct + fastqc + multiqc, via: conda install -c bioconda sra-tools entrez-direct, then: conda create -n rnaseq_tools -c bioconda sra-tools entrez-direct
+#under environment can install things needed later e.g.: conda install -c bioconda fastqc, conda install -c bioconda multiqc
 
 # -------------------------------
 # Step 2: Set up working directory
@@ -82,6 +83,30 @@ ls *_1.fastq.gz | wc -l
 ls *_1.fastq.gz | sed 's/_1.fastq.gz//' | sort > downloaded.txt
 comm -23 <(sort SRR_Acc_List.txt) downloaded.txt > not_downloaded.txt
 
+# -------------------------------
+Step 5: FASTQC
+# run fastqc as as bash script
+echo "Starting FASTQC..."
+mkdir fastqc_results
+bash fastqc.sh
+
+    #!/bin/bash
+    #SBATCH -p day
+    #SBATCH --job-name=fastqc
+    #SBATCH --mail-type=ALL
+    #SBATCH --mem=4G
+    #SBATCH -t 2:00:00
+    #SBATCH --array=0-49
+    #SBATCH --output=logs/fastqc_%A_%a.out
+    #SBATCH --error=logs/fastqc_%A_%a.err
+    module load miniconda
+    conda activate rnaseq_tools
+    cd ~/palmer_scratch/RNAseq_download
+    # Get the nth fastq.gz file
+    FILE=$(ls *.fastq.gz | sort | sed -n "$((SLURM_ARRAY_TASK_ID+1))p")
+    echo "Running FastQC on $FILE"
+    fastqc "$FILE" --outdir ~/palmer_scratch/RNAseq_download/fastqc_results
+    
 # -------------------------------
 # Next steps:
 # -------------------------------
