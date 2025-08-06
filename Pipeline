@@ -42,7 +42,7 @@ esearch -db sra -query SRP223536 | efetch -format runinfo | cut -d ',' -f 1 | gr
 # -------------------------------
 # Script downloads all SRR files and compresses them and converts .sra to .fastq files
 echo "Starting FASTQ download with fasterq-dump..."
-bash fastq_array.sh
+sbatch fastq_array.sh
 
     #!/bin/bash
     ###Run on day partition###
@@ -88,7 +88,7 @@ Step 5: FASTQC
 # run fastqc as as bash script
 echo "Starting FASTQC..."
 mkdir fastqc_results
-bash fastqc.sh
+sbatch fastqc.sh
 
     #!/bin/bash
     #SBATCH -p day
