@@ -106,7 +106,14 @@ bash fastqc.sh
     FILE=$(ls *.fastq.gz | sort | sed -n "$((SLURM_ARRAY_TASK_ID+1))p")
     echo "Running FastQC on $FILE"
     fastqc "$FILE" --outdir ~/palmer_scratch/RNAseq_download/fastqc_results
-    
+
+#compile all fastqc files into one
+multiqc .
+#transfer fastqc file to local downloads folder to check the html
+#go to local terminal
+ssh -i ~/YaleSSHkey mg2684@mccleary.ycrc.yale.edu
+scp -i ~/YaleSSHkey mg2684@transfer-mccleary.ycrc.yale.edu:~/palmer_scratch/RNAseq_download/fastqc_results/multiqc_report.html ~/Downloads/
+
 # -------------------------------
 # Next steps:
 # -------------------------------
