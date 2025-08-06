@@ -111,7 +111,17 @@ bash fastqc.sh
 multiqc .
 #transfer fastqc file to local downloads folder to check the html
 #go to local terminal
-ssh -i ~/YaleSSHkey mg2684@mccleary.ycrc.yale.edu
+#if ssh not set up:
+#ssh-keygen
+#cat ~/YaleSSHkey.pub #upload to yale: https://sshkeys.ycrc.yale.edu/ 
+#ssh -i ~/YaleSSHkey mg2684@mccleary.ycrc.yale.edu
+#nano ~/.ssh/config: Host mccleary
+    HostName mccleary.ycrc.yale.edu
+    User mg2684
+    IdentityFile ~/YaleSSHkey
+#chmod 600 ~/.ssh/config
+#chmod 600 ~/YaleSSHkey
+#chmod 700 ~/.ssh
 scp -i ~/YaleSSHkey mg2684@transfer-mccleary.ycrc.yale.edu:~/palmer_scratch/RNAseq_download/fastqc_results/multiqc_report.html ~/Downloads/
 
 # -------------------------------
