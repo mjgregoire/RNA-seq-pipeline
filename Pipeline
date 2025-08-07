@@ -178,6 +178,7 @@ sbatch trim_fastp.sbatch.
 #check it is working while running with:
 squeue --me
 tail -f fastp_trim.out
+wc -l fastp_trim.out
 
 # -------------------------------
 # Next steps:
