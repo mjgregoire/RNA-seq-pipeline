@@ -134,10 +134,10 @@ sbatch trim_fastp.sbatch.
     #SBATCH --job-name=fastp_trim
     #SBATCH --output=fastp_trim.out
     #SBATCH --error=fastp_trim.err
-    #SBATCH --time=02:00:00
+    #SBATCH --time=06:00:00
     #SBATCH --mem=16G
     #SBATCH --cpus-per-task=4
-    #SBATCH --mail-user=michelle.gregoire@yale.edu  # Optional
+    #SBATCH --mail-user=michelle.gregoire@yale.edu  
     #SBATCH --mail-type=END,FAIL
 
     # Load modules or activate conda
@@ -175,6 +175,9 @@ sbatch trim_fastp.sbatch.
 
     echo "All trimming done."
 
+#check it is working while running with:
+squeue --me
+tail -f fastp_trim.out
 
 # -------------------------------
 # Next steps:
