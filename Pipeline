@@ -8,7 +8,7 @@
 # Dataset: SRP223536
 # Total samples: 25 SRR files
 # Date started: 2025-08-04
-# HPC: Yale cluster (Guo lab)
+# HPC: Yale cluster (Guo lab) /gpfs/gibbs/pi/guo/mg2684
 # Conda environment: rnaseq_tools (sra-tools, entrez-direct installed)
 # Scratch dir: ~/palmer_scratch/rnaseq_download/fastq_files
 # Download method: fasterq-dump + gzip compression
