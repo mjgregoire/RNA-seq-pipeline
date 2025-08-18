@@ -1,15 +1,8 @@
-
-# ----------------------------------------------
 # RNA-seq Pipeline Master Script (for SRP223536)
-# ----------------------------------------------
-# Purpose: Reproducible workflow to download raw FASTQ files from an SRA project
-# and perform RNA-seq analysis.
-#
-# Dataset: SRP223536
-# Total samples: 25 SRR files
-# Date started: 2025-08-04
-# HPC: Yale cluster (Guo lab) /gpfs/gibbs/pi/guo/mg2684
-# Conda environment: rnaseq_tools (sra-tools, entrez-direct installed)
+## Purpose: Reproducible workflow to download raw FASTQ files from an SRA project and perform RNA-seq analysis.
+
+### Conda environment: rnaseq_tools (sra-tools, entrez-direct installed)
+
 # Scratch dir: ~/palmer_scratch/rnaseq_download/fastq_files
 # Download method: fasterq-dump + gzip compression
 # Script used: download_fastq.sh
