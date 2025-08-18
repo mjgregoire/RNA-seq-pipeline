@@ -1,4 +1,4 @@
-# RNA-seq Pipeline Master Script (for SRP223536)
+# RNA-seq Pipeline Master Script 
 ## Purpose: Reproducible workflow to download raw FASTQ files from an SRA project and perform RNA-seq analysis.
 
 ### Conda environment: rnaseq_tools (sra-tools, entrez-direct installed)
