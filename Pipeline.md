@@ -3,11 +3,6 @@
 
 ### Conda environment: rnaseq_tools (sra-tools, entrez-direct installed)
 
-# Scratch dir: ~/palmer_scratch/rnaseq_download/fastq_files
-# Download method: fasterq-dump + gzip compression
-# Script used: download_fastq.sh
-# Runtime (1 sample): ~1 hr 12 min (download + compression)
-
 # -------------------------------
 # Step 1: Log in to HPC and load conda
 # -------------------------------
