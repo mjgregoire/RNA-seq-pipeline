@@ -22,8 +22,8 @@ cd {path to your directory}
 ### For downloading SRA projects or ENA projects with SRA tools
 Get the SRR accession list from SRA Project (SRP)
 You don't want to use the login node on HPC b/c will take up too much compute power so others can't do stuff, so request some time in a cluster to do manual work: ` salloc --mem=1G --time=1:00:00 `
-Use the following code to get SRR accession list: ` esearch -db sra -query {SRA name here} | efetch -format runinfo | cut -d ',' -f 1 | grep SRR > SRR_Acc_List.txt `
-Or for European files: ` -qO - {link to ENA e.g.: "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=ERP131847&result=read_run&fields=run_accession"} | tail -n + 2 > ENA_Run_List.txt
+Use the following code to get SRR accession list: ` esearch -db sra -query {SRA name here} | efetch -format runinfo | cut -d ',' -f 1 | grep SRR > Run_Acc_List.txt `
+Or for European files: ` -qO - {link to ENA e.g.: "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=ERP131847&result=read_run&fields=run_accession"} | tail -n + 2 > Run_Acc_List.txt
 
 
 ### Run FASTQ download script
