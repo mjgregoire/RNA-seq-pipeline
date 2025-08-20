@@ -16,8 +16,8 @@ You can check what packages are you the environment with `conda list`.
 With the environment loaded you can install things needed in it later with the ` conda install -c bioconda {package} ` code
 
 ## Set up/go to working directory
-` mkdir {path to your directory here, e.g.: /gpfs/gibbs/pi/guo/mg2684/RNAseq/ProjectName} `
-` cd {path to your directory} `
+`mkdir {path to your directory here, make an RNA seq folder and then sub folders for each project}`
+`cd {path to your directory}`
 
 ### For downloading FASTQ from SRA projects or ENA projects with SRA tools, make accession list first
 Get the SRR accession list from SRA Project (SRP). But you *don't want to use the login node* on HPC b/c will take up too much compute power and others can't do stuff, so request some time in a cluster to do manual work: `salloc --mem=1G --time=1:00:00`
