@@ -16,8 +16,8 @@ You can check what packages are you the environment with `conda list`.
 With the environment loaded you can install things needed in it later with the ` conda install -c bioconda {package} ` code
 
 ## Set up/go to working directory
-mkdir {path to your directory here, e.g.: /gpfs/gibbs/pi/guo/mg2684/RNAseq/ProjectName
-cd {path to your directory}
+` mkdir {path to your directory here, e.g.: /gpfs/gibbs/pi/guo/mg2684/RNAseq/ProjectName
+cd {path to your directory} `
 
 ### For downloading SRA projects or ENA projects with SRA tools
 Get the SRR accession list from SRA Project (SRP)
