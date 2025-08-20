@@ -74,50 +74,59 @@ Create the script in your folder with: `nano fastq_array.sh`
 
 Run the script with the following commmand: `sbatch fastq_array.sh`
 
-# -------------------------------
-# Step 4: Verify output
-# -------------------------------
-# Optional: run ls or check file counts
-ls -lh fastq_files | grep '.fastq.gz'
-echo "Download complete: $(ls fastq_files/*.fastq.gz | wc -l) fastq files found."
+**Verify output from download**
+Check that the bash script is working with: `squeue --me`
+Or with the output files using: `tail -f ~{your file path here}/logs/*.out
 
-#or?
-squeue --me
-tail -f ~/palmer_scratch/RNAseq_download/logs/*.out
+Run ls or check file counts: `ls -lh fastq_files | grep '.fastq.gz'
+`wc -l SRR_Acc_List.txt`
+`ls *_1.fastq.gz | wc -l`
 
-wc -l SRR_Acc_List.txt
-ls *_1.fastq.gz | wc -l
+`ls *_1.fastq.gz | sed 's/_1.fastq.gz//' | sort > downloaded.txt`
+`comm -23 <(sort SRR_Acc_List.txt) downloaded.txt > not_downloaded.txt`
 
-ls *_1.fastq.gz | sed 's/_1.fastq.gz//' | sort > downloaded.txt
-comm -23 <(sort SRR_Acc_List.txt) downloaded.txt > not_downloaded.txt
+## Quality control on FASTQ files with FASTQC
+Run fastqc as as bash script. 
 
-# -------------------------------
-# Step 5: FASTQC
-# -------------------------------
-# run fastqc as as bash script
-echo "Starting FASTQC..."
-mkdir fastqc_results
-sbatch fastqc.sh
+Make a folder for the results: `mkdir fastqc_results`
 
-    #!/bin/bash
+Make the script using: `nano fastqc.sh`
+
+   ` #!/bin/bash
+   
     #SBATCH -p day
+    
     #SBATCH --job-name=fastqc
+    
     #SBATCH --mail-type=ALL
+    
     #SBATCH --mem=4G
+    
     #SBATCH -t 2:00:00
+    
     #SBATCH --array=0-49
+    
     #SBATCH --output=logs/fastqc_%A_%a.out
+    
     #SBATCH --error=logs/fastqc_%A_%a.err
+    
     module load miniconda
+    
     conda activate rnaseq_tools
-    cd ~/palmer_scratch/RNAseq_download
+    
+    cd ~{path to your folders here}
+    
     # Get the nth fastq.gz file
+    
     FILE=$(ls *.fastq.gz | sort | sed -n "$((SLURM_ARRAY_TASK_ID+1))p")
+    
     echo "Running FastQC on $FILE"
-    fastqc "$FILE" --outdir ~/palmer_scratch/RNAseq_download/fastqc_results
+    
+    fastqc "$FILE" --outdir ~/palmer_scratch/RNAseq_download/fastqc_results`
 
-#compile all fastqc files into one
-multiqc .
+Run fastqc with: `sbatch fastqc.sh`
+Then compile all fastqc files into one using: `multiqc .`
+
 #transfer fastqc file to local downloads folder to check the html
 #go to local terminal
 #if ssh not set up:
