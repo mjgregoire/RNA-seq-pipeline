@@ -55,6 +55,7 @@ gzip ${SRR}_1.fastq ${SRR}_2.fastq
 ```
 
 Run the script with the following commmand: `sbatch fastq_array.sh`
+Using sbatch on bash scripts will send them to an available cluster and they will run in the background until completed, the time runs out, or they run into an error. You can at this point run other scripts or leave the command line and your script should still run. 
 
 **Verify output from download**
 Check that the bash script is working with: `squeue --me`
@@ -74,37 +75,24 @@ Make a folder for the results: `mkdir fastqc_results`
 
 Make the script using: `nano fastqc.sh`
 
-   `#!/bin/bash
-   
-    #SBATCH -p day
-    
-    #SBATCH --job-name=fastqc
-    
-    #SBATCH --mail-type=ALL
-    
-    #SBATCH --mem=4G
-    
-    #SBATCH -t 2:00:00
-    
-    #SBATCH --array=0-49
-    
-    #SBATCH --output=logs/fastqc_%A_%a.out
-    
-    #SBATCH --error=logs/fastqc_%A_%a.err
-    
-    module load miniconda
-    
-    conda activate rnaseq_tools
-    
-    cd ~{path to your folders here}
-    
-    # Get the nth fastq.gz file
-    
-    FILE=$(ls *.fastq.gz | sort | sed -n "$((SLURM_ARRAY_TASK_ID+1))p")
-    
-    echo "Running FastQC on $FILE"
-    
-    fastqc "$FILE" --outdir ~/palmer_scratch/RNAseq_download/fastqc_results`
+```
+#!/bin/bash
+#SBATCH -p day
+#SBATCH --job-name=fastqc
+#SBATCH --mail-type=ALL
+#SBATCH --mem=4G
+#SBATCH -t 2:00:00 
+#SBATCH --array=0-49
+#SBATCH --output=logs/fastqc_%A_%a.out
+#SBATCH --error=logs/fastqc_%A_%a.err
+module load miniconda
+conda activate rnaseq_tools
+cd ~{path to your folders here}
+# Get the nth fastq.gz file
+FILE=$(ls *.fastq.gz | sort | sed -n "$((SLURM_ARRAY_TASK_ID+1))p")
+echo "Running FastQC on $FILE"
+fastqc "$FILE" --outdir ~/palmer_scratch/RNAseq_download/fastqc_results`
+```
 
 Run fastqc with: `sbatch fastqc.sh`
 Then compile all fastqc files into one using: `multiqc .`
@@ -115,14 +103,16 @@ To open the multiqc .html report you need to transfer the file to your local dow
 `cat ~/YaleSSHkey.pub` and upload the key to Yale: https://sshkeys.ycrc.yale.edu/ 
 
 Check that you can SSH into the Yale HPC and have the proper settings: 
-`ssh -i ~/YaleSSHkey {your ID}@mccleary.ycrc.yale.edu`
-`nano ~/.ssh/config: Host mccleary
+```
+ssh -i ~/YaleSSHkey {your ID}@mccleary.ycrc.yale.edu
+nano ~/.ssh/config: Host mccleary
     HostName mccleary.ycrc.yale.edu
     User {your ID}
-    IdentityFile ~/YaleSSHkey`
-`chmod 600 ~/.ssh/config`
-`chmod 600 ~/YaleSSHkey`
-`chmod 700 ~/.ssh`
+    IdentityFile ~/YaleSSHkey
+chmod 600 ~/.ssh/config
+chmod 600 ~/YaleSSHkey
+chmod 700 ~/.ssh
+```
 
 On your terminal type the following to SSH into the HPC and download the file locally: 
 `scp -i ~/YaleSSHkey {your ID}@transfer-mccleary.ycrc.yale.edu:~{your file path here}/fastqc_results/multiqc_report.html ~/Downloads/`
