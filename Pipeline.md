@@ -1,5 +1,5 @@
 # RNA-seq Pipeline Master Script 
-**Purpose: Reproducible workflow for RNA-seq analysis.**
+**Purpose: Reproducible workflow for RNA-seq analysis. This project is currently in progress and will be updated regularly from Agust 2025 through and to November 2025**
 
 ## Log in to HPC and load conda
 Conda environment: rnaseq_tools (Packages: sra-tools, entrez-direct, fastqc, multiqc, samtools, etc...)
