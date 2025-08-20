@@ -130,14 +130,13 @@ To trim poor sequence quality or adapters on FASTQ files make and run the follow
 #SBATCH --time=06:00:00
 #SBATCH --mem=16G
 #SBATCH --cpus-per-task=4
-#SBATCH --mail-user=michelle.gregoire@yale.edu  
-#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-type=ALL 
 # Load modules or activate conda
 module purge
 module load miniconda
-source activate your_fastp_env  # Replace with your conda env name that has fastp installed
+source activate rnaseq_tools  
 # Define directories
-IN_DIR=~/palmer_scratch/RNAseq_download
+IN_DIR=~{path to your directory here}
 OUT_DIR=${IN_DIR}/trimmed_fastq
 mkdir -p "$OUT_DIR"
 # Trimming loop
@@ -189,18 +188,18 @@ sbatch fastqc.sh
     #SBATCH --error=logs/fastqc_%A_%a.err
     module load miniconda
     conda activate rnaseq_tools
-    cd ~/palmer_scratch/RNAseq_download
+    cd ~{your path here}
     # Get the nth fastq.gz file
     FILE=$(ls *.fastq.gz | sort | sed -n "$((SLURM_ARRAY_TASK_ID+1))p")
     echo "Running FastQC on $FILE"
-    fastqc "$FILE" --outdir ~/palmer_scratch/RNAseq_download/fastqc_results
+    fastqc "$FILE" --outdir ~{your path here/fastqc_results}
 
 #compile all fastqc files into one
 multiqc .
 #transfer fastqc file to local downloads folder to check the html
 #go to local terminal
-#ssh -i ~/YaleSSHkey mg2684@mccleary.ycrc.yale.edu
-scp -i ~/YaleSSHkey mg2684@transfer-mccleary.ycrc.yale.edu:~/palmer_scratch/RNAseq_download/trimmed_fastq/fastqc_results/multiqc_report.html ~/Downloads/
+#ssh -i ~/YaleSSHkey {your ID}@mccleary.ycrc.yale.edu
+scp -i ~/YaleSSHkey {your ID}@transfer-mccleary.ycrc.yale.edu:~{your path here/trimmed_fastq/fastqc_results/multiqc_report.html} ~/Downloads/
 ```
 
 
