@@ -130,9 +130,7 @@ Then compile all fastqc files into one using: `multiqc .`
 To open the multiqc .html report you need to transfer the file to your local downloads folder. To do this you need to go to your local terminal. If you have not already set up an ssh key, do the following: 
 
 `ssh-keygen`
-`cat ~/YaleSSHkey.pub`
-
-Upload the key to yale: https://sshkeys.ycrc.yale.edu/ 
+`cat ~/YaleSSHkey.pub` and upload the key to Yale: https://sshkeys.ycrc.yale.edu/ 
 
 `ssh -i ~/YaleSSHkey mg2684@mccleary.ycrc.yale.edu
 nano ~/.ssh/config: Host mccleary
@@ -141,8 +139,9 @@ nano ~/.ssh/config: Host mccleary
     IdentityFile ~/YaleSSHkey
 chmod 600 ~/.ssh/config
 chmod 600 ~/YaleSSHkey
-chmod 700 ~/.ssh
-scp -i ~/YaleSSHkey mg2684@transfer-mccleary.ycrc.yale.edu:~{your file path here}/fastqc_results/multiqc_report.html ~/Downloads/`
+chmod 700 ~/.ssh `
+
+On your terminal type the following to SSH into the HPC and download the file locally: `scp -i ~/YaleSSHkey mg2684@transfer-mccleary.ycrc.yale.edu:~{your file path here}/fastqc_results/multiqc_report.html ~/Downloads/`
 
 ## Trimming FASTQ files
 echo "Staring trimming..."
