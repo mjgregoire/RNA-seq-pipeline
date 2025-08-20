@@ -4,8 +4,8 @@
 ## Step 1: Log in to HPC and load conda
 Conda environment: rnaseq_tools (Packages: sra-tools, entrez-direct, fastqc, multiqc, samtools, etc...)
 
-` module load miniconda
-conda activate rnaseq_tools `
+` module load miniconda `
+` conda activate rnaseq_tools `
 
 This was installed via: 
 
