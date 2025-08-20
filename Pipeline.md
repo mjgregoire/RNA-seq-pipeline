@@ -19,39 +19,57 @@ With the environment loaded you can install things needed in it later with the `
 ` mkdir {path to your directory here, e.g.: /gpfs/gibbs/pi/guo/mg2684/RNAseq/ProjectName} `
 ` cd {path to your directory} `
 
-### For downloading SRA projects or ENA projects with SRA tools
-Get the SRR accession list from SRA Project (SRP)
-You don't want to use the login node on HPC b/c will take up too much compute power so others can't do stuff, so request some time in a cluster to do manual work: ` salloc --mem=1G --time=1:00:00 `
+### For downloading FASTQ from SRA projects or ENA projects with SRA tools, make accession list first
+Get the SRR accession list from SRA Project (SRP). But you *don't want to use the login node* on HPC b/c will take up too much compute power and others can't do stuff, so request some time in a cluster to do manual work: `salloc --mem=1G --time=1:00:00`
 
-Use the following code to get SRR accession list: ` esearch -db sra -query {SRA name here} | efetch -format runinfo | cut -d ',' -f 1 | grep SRR > Run_Acc_List.txt `
+Use the following code to get SRR accession list: `esearch -db sra -query {SRA name here} | efetch -format runinfo | cut -d ',' -f 1 | grep SRR > Run_Acc_List.txt`
 
-Or for European files: ` -qO - {link to ENA e.g.: "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=ERP131847&result=read_run&fields=run_accession"} | tail -n + 2 > Run_Acc_List.txt `
-
+Or for European files: `-qO - {link to ENA e.g.: "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=ERP131847&result=read_run&fields=run_accession"} | tail -n + 2 > Run_Acc_List.txt`
 
 ### Run FASTQ download script
 This bash script will convert .sra to .fastq files if applicable, and downloads and compresses fastq files.
 Create the script in your folder with: `nano fastq_array.sh`
 
    ` #!/bin/bash
+   
     ###Run on day partition###
+    
     #SBATCH -p day
+    
     ###name job###
+    
     #SBATCH --job-name=fastq_array
+    
     ###request 1 GB memory###
+    
     #SBATCH --mem-per-cpu=1G
+    
     ###request 6 hours worth of time### #or might need more time depending on size and number of files
+    
     #SBATCH -t 6:00:00
+    
     ###create email trail###
+    
     #SBATCH --mail-type=ALL
+    
     #SBATCH --output=logs/fastq_%A_%a.out
+    
     #SBATCH --error=logs/fastq_%A_%a.err
+    
     #SBATCH --array=0-24     # Adjust if you have more or fewer SRRs
+    
     module load miniconda
+    
     conda activate rnaseq_tools
-    cd ~/palmer_scratch/rnaseq_download
+    
+    cd ~{path to your directory here}
+    
     SRR=$(sed -n "$((SLURM_ARRAY_TASK_ID+1))p" SRR_Acc_List.txt)
+    
     echo "[$(date)] Downloading $SRR"
+    
     fasterq-dump --split-files --threads 4 "$SRR"
+    
     gzip ${SRR}_1.fastq ${SRR}_2.fastq `
 
 Run the script with the following commmand: `sbatch fastq_array.sh`
