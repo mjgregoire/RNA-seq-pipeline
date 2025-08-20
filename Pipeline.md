@@ -92,7 +92,7 @@ Make a folder for the results: `mkdir fastqc_results`
 
 Make the script using: `nano fastqc.sh`
 
-   ` #!/bin/bash
+   `#!/bin/bash
    
     #SBATCH -p day
     
@@ -131,19 +131,19 @@ To open the multiqc .html report you need to transfer the file to your local dow
 
 `ssh-keygen`
 `cat ~/YaleSSHkey.pub` and upload the key to Yale: https://sshkeys.ycrc.yale.edu/ 
-Check that you can SSH into the Yale HPC and have the proper settings: 
 
-`ssh -i ~/YaleSSHkey mg2684@mccleary.ycrc.yale.edu`
+Check that you can SSH into the Yale HPC and have the proper settings: 
+`ssh -i ~/YaleSSHkey {your ID}@mccleary.ycrc.yale.edu`
 `nano ~/.ssh/config: Host mccleary
     HostName mccleary.ycrc.yale.edu
-    User mg2684
+    User {your ID}
     IdentityFile ~/YaleSSHkey`
 `chmod 600 ~/.ssh/config`
 `chmod 600 ~/YaleSSHkey`
 `chmod 700 ~/.ssh`
 
 On your terminal type the following to SSH into the HPC and download the file locally: 
-`scp -i ~/YaleSSHkey mg2684@transfer-mccleary.ycrc.yale.edu:~{your file path here}/fastqc_results/multiqc_report.html ~/Downloads/`
+`scp -i ~/YaleSSHkey {your ID}@transfer-mccleary.ycrc.yale.edu:~{your file path here}/fastqc_results/multiqc_report.html ~/Downloads/`
 
 ## Trimming FASTQ files
 echo "Staring trimming..."
