@@ -114,67 +114,67 @@ chmod 600 ~/YaleSSHkey
 chmod 700 ~/.ssh
 ```
 
-On your terminal type the following to SSH into the HPC and download the file locally: 
+On your terminal type the following to SSH into the HPC and download the file locally (this downloads to your Downloads folder): 
 `scp -i ~/YaleSSHkey {your ID}@transfer-mccleary.ycrc.yale.edu:~{your file path here}/fastqc_results/multiqc_report.html ~/Downloads/`
 
 ## Trimming FASTQ files
-echo "Staring trimming..."
-sbatch trim_fastp.sbatch.
-    #!/bin/bash
-    #SBATCH --job-name=fastp_trim
-    #SBATCH --output=fastp_trim.out
-    #SBATCH --error=fastp_trim.err
-    #SBATCH --time=06:00:00
-    #SBATCH --mem=16G
-    #SBATCH --cpus-per-task=4
-    #SBATCH --mail-user=michelle.gregoire@yale.edu  
-    #SBATCH --mail-type=END,FAIL
+To trim poor sequence quality or adapters on FASTQ files make and run the following bash script. 
+`nano trim_fastp.sh`
+`sbatch trim_fastp.sh`
 
-    # Load modules or activate conda
-    module purge
-    module load miniconda
-    source activate your_fastp_env  # Replace with your conda env name that has fastp installed
+```
+#!/bin/bash
+#SBATCH --job-name=fastp_trim
+#SBATCH --output=fastp_trim.out
+#SBATCH --error=fastp_trim.err
+#SBATCH --time=06:00:00
+#SBATCH --mem=16G
+#SBATCH --cpus-per-task=4
+#SBATCH --mail-user=michelle.gregoire@yale.edu  
+#SBATCH --mail-type=END,FAIL
+# Load modules or activate conda
+module purge
+module load miniconda
+source activate your_fastp_env  # Replace with your conda env name that has fastp installed
+# Define directories
+IN_DIR=~/palmer_scratch/RNAseq_download
+OUT_DIR=${IN_DIR}/trimmed_fastq
+mkdir -p "$OUT_DIR"
+# Trimming loop
+for R1 in "$IN_DIR"/*_1.fastq.gz; do
+    BASE=$(basename "$R1" _1.fastq.gz)
+    R2="${IN_DIR}/${BASE}_2.fastq.gz"
 
-    # Define directories
-    IN_DIR=~/palmer_scratch/RNAseq_download
-    OUT_DIR=${IN_DIR}/trimmed_fastq
-    mkdir -p "$OUT_DIR"
+    echo "Trimming $BASE..."
 
-    # Trimming loop
-    for R1 in "$IN_DIR"/*_1.fastq.gz; do
-        BASE=$(basename "$R1" _1.fastq.gz)
-        R2="${IN_DIR}/${BASE}_2.fastq.gz"
+    fastp \
+      -i "$R1" \
+      -I "$R2" \
+      -o "$OUT_DIR/${BASE}_R1.trimmed.fastq.gz" \
+      -O "$OUT_DIR/${BASE}_R2.trimmed.fastq.gz" \
+      --detect_adapter_for_pe \
+      --cut_front \
+      --cut_tail \
+      --cut_window_size 4 \
+      --cut_mean_quality 20 \
+      --length_required 20 \
+      --thread 4 \
+      --html "$OUT_DIR/${BASE}_fastp.html" \
+      --json "$OUT_DIR/${BASE}_fastp.json"
 
-        echo "Trimming $BASE..."
+done
 
-        fastp \
-          -i "$R1" \
-          -I "$R2" \
-          -o "$OUT_DIR/${BASE}_R1.trimmed.fastq.gz" \
-          -O "$OUT_DIR/${BASE}_R2.trimmed.fastq.gz" \
-          --detect_adapter_for_pe \
-          --cut_front \
-          --cut_tail \
-          --cut_window_size 4 \
-          --cut_mean_quality 20 \
-          --length_required 20 \
-          --thread 4 \
-          --html "$OUT_DIR/${BASE}_fastp.html" \
-          --json "$OUT_DIR/${BASE}_fastp.json"
-    done
-
-    echo "All trimming done."
-
-#check it is working while running with:
+echo "All trimming done."
+```
+Check the script is working while running with:
+```
 squeue --me
 tail -f fastp_trim.out
 wc -l fastp_trim.out
+```
+Now you can re-Run FASTQC using the same script as before and check that the sequences have better quality now:
 
-# -------------------------------
-# Step 7: Re-Run FASTQC
-# -------------------------------
-# run fastqc as as bash script
-echo "Starting FASTQC..."
+```
 mkdir fastqc_results
 sbatch fastqc.sh
 
@@ -201,8 +201,9 @@ multiqc .
 #go to local terminal
 #ssh -i ~/YaleSSHkey mg2684@mccleary.ycrc.yale.edu
 scp -i ~/YaleSSHkey mg2684@transfer-mccleary.ycrc.yale.edu:~/palmer_scratch/RNAseq_download/trimmed_fastq/fastqc_results/multiqc_report.html ~/Downloads/
+```
 
-# -------------------------------
+
 # Next steps:
 # -------------------------------
 # - align with STAR or HISAT2
