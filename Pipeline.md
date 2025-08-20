@@ -11,14 +11,10 @@ This was installed via:
 
 ` conda install -c bioconda {package} ` ` conda create -n{name} -c bioconda {packages separated by spaces} `
 
-You can check what packages are you the environment with `conda list`
+You can check what packages are you the environment with `conda list` 
+With the environment loaded you can install things needed in it later with the ` conda install -c bioconda {package} ` code
 
-Under environment you can install things needed later with this code: 
-` conda install -c bioconda {package} `
-
-# -------------------------------
-# Step 2: Set up working directory
-# -------------------------------
+## Step 2: Set up working directory
 mkdir ~/palmer_scratch/fastq_files #OR cleaner folders: mkdir -p ~/projects/rnaseq_download/fastq_files
 cd ~/palmer_scratch/fastq_files #OR the cleaner folders: cd ~/projects/rnaseq_download/fastq_files
 
