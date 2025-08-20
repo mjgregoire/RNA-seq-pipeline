@@ -76,9 +76,9 @@ Run the script with the following commmand: `sbatch fastq_array.sh`
 
 **Verify output from download**
 Check that the bash script is working with: `squeue --me`
-Or with the output files using: `tail -f ~{your file path here}/logs/*.out
+Or with the output files using: `tail -f ~{your file path here}/logs/*.out`
 
-Run ls or check file counts: `ls -lh fastq_files | grep '.fastq.gz'
+Run ls or check file counts: `ls -lh fastq_files | grep '.fastq.gz'`
 `wc -l SRR_Acc_List.txt`
 `ls *_1.fastq.gz | wc -l`
 
@@ -127,24 +127,24 @@ Make the script using: `nano fastqc.sh`
 Run fastqc with: `sbatch fastqc.sh`
 Then compile all fastqc files into one using: `multiqc .`
 
-#transfer fastqc file to local downloads folder to check the html
-#go to local terminal
-#if ssh not set up:
-#ssh-keygen
-#cat ~/YaleSSHkey.pub #upload to yale: https://sshkeys.ycrc.yale.edu/ 
-#ssh -i ~/YaleSSHkey mg2684@mccleary.ycrc.yale.edu
-#nano ~/.ssh/config: Host mccleary
+To open the multiqc .html report you need to transfer the file to your local downloads folder. To do this you need to go to your local terminal. If you have not already set up an ssh key, do the following: 
+
+`ssh-keygen`
+`cat ~/YaleSSHkey.pub`
+
+Upload the key to yale: https://sshkeys.ycrc.yale.edu/ 
+
+`ssh -i ~/YaleSSHkey mg2684@mccleary.ycrc.yale.edu
+nano ~/.ssh/config: Host mccleary
     HostName mccleary.ycrc.yale.edu
     User mg2684
     IdentityFile ~/YaleSSHkey
-#chmod 600 ~/.ssh/config
-#chmod 600 ~/YaleSSHkey
-#chmod 700 ~/.ssh
-scp -i ~/YaleSSHkey mg2684@transfer-mccleary.ycrc.yale.edu:~/palmer_scratch/RNAseq_download/fastqc_results/multiqc_report.html ~/Downloads/
+chmod 600 ~/.ssh/config
+chmod 600 ~/YaleSSHkey
+chmod 700 ~/.ssh
+scp -i ~/YaleSSHkey mg2684@transfer-mccleary.ycrc.yale.edu:~{your file path here}/fastqc_results/multiqc_report.html ~/Downloads/`
 
-# -------------------------------
-# Step 6: Trim and QC
-# -------------------------------
+## Trimming FASTQ files
 echo "Staring trimming..."
 sbatch trim_fastp.sbatch.
     #!/bin/bash
