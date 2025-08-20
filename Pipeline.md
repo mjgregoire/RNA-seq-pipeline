@@ -1,19 +1,22 @@
 # RNA-seq Pipeline Master Script 
 **Purpose: Reproducible workflow for RNA-seq analysis.**
 
-Conda environment: rnaseq_tools (sra-tools, entrez-direct, fastqc, multiqc, samtools, etc...)
+## Step 1: Log in to HPC and load conda
+Conda environment: rnaseq_tools (Packages: sra-tools, entrez-direct, fastqc, multiqc, samtools, etc...)
 
-This was installed via
+` module load miniconda
+conda activate rnaseq_tools `
+
+This was installed via: 
+
 ` conda install -c bioconda {package} 
+
 conda create -n{name} -c bioconda {packages separated by spaces} `
+
 You can check what packages are you the environment with `conda list`
 
 Under environment you can install things needed later with this code: 
 ` conda install -c bioconda {package} `
-
-## Step 1: Log in to HPC and load conda
-` module load miniconda
-conda activate rnaseq_tools `
 
 # -------------------------------
 # Step 2: Set up working directory
