@@ -30,7 +30,7 @@ Or for European files: `-qO - {link to ENA e.g.: "https://www.ebi.ac.uk/ena/port
 This bash script will convert .sra to .fastq files if applicable, and downloads and compresses fastq files.
 Create the script in your folder with: `nano fastq_array.sh`
 
-   ` #!/bin/bash
+   `#!/bin/bash
    
     ###Run on day partition###
     
@@ -70,7 +70,7 @@ Create the script in your folder with: `nano fastq_array.sh`
     
     fasterq-dump --split-files --threads 4 "$SRR"
     
-    gzip ${SRR}_1.fastq ${SRR}_2.fastq `
+    gzip ${SRR}_1.fastq ${SRR}_2.fastq`
 
 Run the script with the following commmand: `sbatch fastq_array.sh`
 
