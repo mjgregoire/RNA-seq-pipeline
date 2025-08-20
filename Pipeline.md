@@ -9,9 +9,7 @@ Conda environment: rnaseq_tools (Packages: sra-tools, entrez-direct, fastqc, mul
 
 This was installed via: 
 
-` conda install -c bioconda {package} 
-
-conda create -n{name} -c bioconda {packages separated by spaces} `
+` conda install -c bioconda {package} ` ` conda create -n{name} -c bioconda {packages separated by spaces} `
 
 You can check what packages are you the environment with `conda list`
 
