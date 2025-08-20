@@ -25,15 +25,14 @@ You don't want to use the login node on HPC b/c will take up too much compute po
 
 Use the following code to get SRR accession list: ` esearch -db sra -query {SRA name here} | efetch -format runinfo | cut -d ',' -f 1 | grep SRR > Run_Acc_List.txt `
 
-Or for European files: ` -qO - {link to ENA e.g.: "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=ERP131847&result=read_run&fields=run_accession"} | tail -n + 2 > Run_Acc_List.txt
+Or for European files: ` -qO - {link to ENA e.g.: "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=ERP131847&result=read_run&fields=run_accession"} | tail -n + 2 > Run_Acc_List.txt `
 
 
 ### Run FASTQ download script
-# Script downloads all SRR files and compresses them and converts .sra to .fastq files
-echo "Starting FASTQ download with fasterq-dump..."
-sbatch fastq_array.sh
+This bash script will convert .sra to .fastq files if applicable, and downloads and compresses fastq files.
+Create the script in your folder with: `nano fastq_array.sh`
 
-    #!/bin/bash
+   ` #!/bin/bash
     ###Run on day partition###
     #SBATCH -p day
     ###name job###
@@ -53,7 +52,9 @@ sbatch fastq_array.sh
     SRR=$(sed -n "$((SLURM_ARRAY_TASK_ID+1))p" SRR_Acc_List.txt)
     echo "[$(date)] Downloading $SRR"
     fasterq-dump --split-files --threads 4 "$SRR"
-    gzip ${SRR}_1.fastq ${SRR}_2.fastq
+    gzip ${SRR}_1.fastq ${SRR}_2.fastq `
+
+Run the script with the following commmand: `sbatch fastq_array.sh`
 
 # -------------------------------
 # Step 4: Verify output
