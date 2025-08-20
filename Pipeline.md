@@ -1,7 +1,7 @@
 # RNA-seq Pipeline Master Script 
 **Purpose: Reproducible workflow for RNA-seq analysis.**
 
-## Step 1: Log in to HPC and load conda
+## Log in to HPC and load conda
 Conda environment: rnaseq_tools (Packages: sra-tools, entrez-direct, fastqc, multiqc, samtools, etc...)
 
 ` module load miniconda `
@@ -11,25 +11,22 @@ This was installed via:
 
 ` conda install -c bioconda {package} ` ` conda create -n{name} -c bioconda {packages separated by spaces} `
 
-You can check what packages are you the environment with `conda list` 
+You can check what packages are you the environment with `conda list`.
+
 With the environment loaded you can install things needed in it later with the ` conda install -c bioconda {package} ` code
 
-## Step 2: Set up working directory
-mkdir ~/palmer_scratch/fastq_files #OR cleaner folders: mkdir -p ~/projects/rnaseq_download/fastq_files
-cd ~/palmer_scratch/fastq_files #OR the cleaner folders: cd ~/projects/rnaseq_download/fastq_files
+## Set up/go to working directory
+mkdir {path to your directory here, e.g.: /gpfs/gibbs/pi/guo/mg2684/RNAseq/ProjectName
+cd {path to your directory}
 
-# -------------------------------
-# Step 3: Get SRR accession list from SRA Project (SRP)
-# -------------------------------
-shh transfer #better for downloading/transferring files on HPC, don't want to use the login node b/c will take up too much compute power so others can't do stuff
-echo "Fetching SRR accession list for SRP223536..."
-esearch -db sra -query SRP223536 | efetch -format runinfo | cut -d ',' -f 1 | grep SRR > SRR_Acc_List.txt
-#or for European files:
-# -qO - "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=ERP131847&result=read_run&fields=run_accession" | tail -n +
-2 > ENA_Run_List.txt
-# -------------------------------
-# Step 4: Run FASTQ download script
-# -------------------------------
+### For downloading SRA projects or ENA projects with SRA tools
+Get the SRR accession list from SRA Project (SRP)
+You don't want to use the login node on HPC b/c will take up too much compute power so others can't do stuff, so request some time in a cluster to do manual work: ` salloc --mem=1G --time=1:00:00 `
+Use the following code to get SRR accession list: ` esearch -db sra -query {SRA name here} | efetch -format runinfo | cut -d ',' -f 1 | grep SRR > SRR_Acc_List.txt `
+Or for European files: ` -qO - {link to ENA e.g.: "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=ERP131847&result=read_run&fields=run_accession"} | tail -n + 2 > ENA_Run_List.txt
+
+
+### Run FASTQ download script
 # Script downloads all SRR files and compresses them and converts .sra to .fastq files
 echo "Starting FASTQ download with fasterq-dump..."
 sbatch fastq_array.sh
