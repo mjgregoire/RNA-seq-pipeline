@@ -4,16 +4,16 @@
 ## Log in to HPC and load conda
 Conda environment: rnaseq_tools (Packages: sra-tools, entrez-direct, fastqc, multiqc, samtools, etc...)
 
-` module load miniconda `
-` conda activate rnaseq_tools `
+`module load miniconda`
+`conda activate rnaseq_tools`
 
 This was installed via: 
 
-` conda install -c bioconda {package} ` ` conda create -n{name} -c bioconda {packages separated by spaces} `
+`conda install -c bioconda {package}` `conda create -n{name} -c bioconda {packages separated by spaces}`
 
 You can check what packages are you the environment with `conda list`.
 
-With the environment loaded you can install things needed in it later with the ` conda install -c bioconda {package} ` code
+With the environment loaded you can install things needed in it later with the `conda install -c bioconda {package}` code
 
 ## Set up/go to working directory
 `mkdir {path to your directory here, make an RNA seq folder and then sub folders for each project}`
@@ -31,47 +31,27 @@ This bash script will convert .sra to .fastq files if applicable, and downloads 
 Create the script in your folder with: `nano fastq_array.sh`
 
 ```
-    #!/bin/bash
-   
-    ###Run on day partition###
-    
-    #SBATCH -p day
-    
-    ###name job###
-    
-    #SBATCH --job-name=fastq_array
-    
-    ###request 1 GB memory###
-    
-    #SBATCH --mem-per-cpu=1G
-    
-    ###request 6 hours worth of time### #or might need more time depending on size and number of files
-    
-    #SBATCH -t 6:00:00
-    
-    ###create email trail###
-    
-    #SBATCH --mail-type=ALL
-    
-    #SBATCH --output=logs/fastq_%A_%a.out
-    
-    #SBATCH --error=logs/fastq_%A_%a.err
-    
-    #SBATCH --array=0-24     # Adjust if you have more or fewer SRRs
-    
-    module load miniconda
-    
-    conda activate rnaseq_tools
-    
-    cd ~{path to your directory here}
-    
-    SRR=$(sed -n "$((SLURM_ARRAY_TASK_ID+1))p" SRR_Acc_List.txt)
-    
-    echo "[$(date)] Downloading $SRR"
-    
-    fasterq-dump --split-files --threads 4 "$SRR"
-    
-    gzip ${SRR}_1.fastq ${SRR}_2.fastq
+#!/bin/bash
+###Run on day partition### 
+#SBATCH -p day
+###name job###  
+#SBATCH --job-name=fastq_array
+###request 1 GB memory###
+#SBATCH --mem-per-cpu=1G
+###request 6 hours worth of time### #or might need more time depending on size and number of files
+#SBATCH -t 6:00:00
+###create email trail###
+#SBATCH --mail-type=ALL
+#SBATCH --output=logs/fastq_%A_%a.out
+#SBATCH --error=logs/fastq_%A_%a.err
+#SBATCH --array=0-24     # Adjust if you have more or fewer SRRs
+module load miniconda
+conda activate rnaseq_tools
+cd ~{path to your directory here}
+SRR=$(sed -n "$((SLURM_ARRAY_TASK_ID+1))p" SRR_Acc_List.txt) 
+echo "[$(date)] Downloading $SRR"
+fasterq-dump --split-files --threads 4 "$SRR" 
+gzip ${SRR}_1.fastq ${SRR}_2.fastq
 ```
 
 Run the script with the following commmand: `sbatch fastq_array.sh`
