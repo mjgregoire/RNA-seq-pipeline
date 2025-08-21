@@ -82,7 +82,7 @@ Make the script using: `nano fastqc.sh`
 #SBATCH --mail-type=ALL
 #SBATCH --mem=4G
 #SBATCH -t 2:00:00 
-#SBATCH --array=0-49
+#SBATCH --array=0-49 #change this to the number of files you have
 #SBATCH --output=logs/fastqc_%A_%a.out
 #SBATCH --error=logs/fastqc_%A_%a.err
 module load miniconda
@@ -91,7 +91,7 @@ cd ~{path to your folders here}
 # Get the nth fastq.gz file
 FILE=$(ls *.fastq.gz | sort | sed -n "$((SLURM_ARRAY_TASK_ID+1))p")
 echo "Running FastQC on $FILE"
-fastqc "$FILE" --outdir ~/palmer_scratch/RNAseq_download/fastqc_results`
+fastqc "$FILE" --outdir ~{path to your folders here}`
 ```
 
 Run fastqc with: `sbatch fastqc.sh`
