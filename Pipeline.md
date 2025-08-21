@@ -7,7 +7,7 @@ Log in to HPC with OpenOnDemand GUI or via SSH.
 To log in with SSH you need to create a specific key do this with the following:
 ```
 ssh-keygen
-cat ~/YaleSSHkey.pub
+cat ~/YaleSSHkey.pub #I named my key "YaleSSHkey" but you can name it whatever
 ```
 Upload the key to Yale: https://sshkeys.ycrc.yale.edu/ 
 
