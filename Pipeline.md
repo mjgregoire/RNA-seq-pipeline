@@ -277,8 +277,9 @@ fastqc "$FILE" --outdir /gpfs/gibbs/pi/guo/mg2684/ERP131847/fastqs/trimmed_fastq
 multiqc .
 #transfer fastqc file to local downloads folder to check the html
 #go to local terminal
-#scp -i ~/YaleSSHkey {your ID}@transfer-mccleary.ycrc.yale.edu:{path to your accesion here}/fastqs/fastqc_results/multiqc_report.html \
-~/Downloads/multiqc_report_$reRun(basename $(dirname $(dirname $(dirname /{path to your accession here}/fastqs/fastqc_results/multiqc_report.html)))).html
+#scp -i ~/YaleSSHkey \
+mg2684@transfer-mccleary.ycrc.yale.edu:/gpfs/gibbs/pi/guo/mg2684/ERP131847/fastqs/trimmed_fastq/trimmed_fastqc_results/multiqc_report.html \
+~/Downloads/multiqc_report_trimmed_$(basename $(dirname $(dirname $(dirname $(dirname /gpfs/gibbs/pi/guo/mg2684/ERP131847/fastqs/trimmed_fastq/trimmed_fastqc_results/multiqc_report.html))))).html
 ```
 
 
