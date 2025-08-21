@@ -153,8 +153,8 @@ chmod 700 ~/.ssh
 ```
 
 On your terminal type the following to SSH into the HPC and download the file locally (this downloads to your Downloads folder): 
-`scp -i ~/YaleSSHkey mg2684@transfer-mccleary.ycrc.yale.edu:/gpfs/gibbs/pi/guo/mg2684/ERP131847/fastqs/fastqc_results/multiqc_report.html \
-~/Downloads/multiqc_report_$(basename $(dirname $(dirname $(dirname /gpfs/gibbs/pi/guo/mg2684/ERP131847/fastqs/fastqc_results/multiqc_report.html))).html`
+scp -i ~/YaleSSHkey {your ID}@transfer-mccleary.ycrc.yale.edu:{path to your accesion here}/fastqs/fastqc_results/multiqc_report.html \
+~/Downloads/multiqc_report_$(basename $(dirname $(dirname $(dirname /{path to your accession here}/fastqs/fastqc_results/multiqc_report.html)))).html
 
 ## Trimming FASTQ files
 To trim poor sequence quality or adapters on FASTQ files make and run the following bash script. 
