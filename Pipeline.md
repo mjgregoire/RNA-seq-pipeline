@@ -2,7 +2,7 @@
 **Purpose: Reproducible workflow for RNA-seq analysis. This project is currently in progress and will be updated regularly from Agust 2025 through and to November 2025**
 
 ## Log in to HPC and load conda
-Log in to HPC with OpenOnDemand GUI or via SSH. 
+Log in to HPC with OpenOnDemand GUI or via SSH on your computer's terminal. 
 
 To log in with SSH you need to create a specific key do this with the following:
 ```
