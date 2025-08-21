@@ -190,12 +190,12 @@ for R1 in "$IN_DIR"/*_1.fastq.gz; do
       -I "$R2" \
       -o "$OUT_DIR/${BASE}_R1.trimmed.fastq.gz" \
       -O "$OUT_DIR/${BASE}_R2.trimmed.fastq.gz" \
-      --detect_adapter_for_pe \
-      --cut_front \
-      --cut_tail \
-      --cut_window_size 4 \
-      --cut_mean_quality 20 \
-      --length_required 20 \
+      --detect_adapter_for_pe \         # Auto-detect adapters (keep)
+      --cut_front \                     # Trim low-quality bases from 5’ end
+      --cut_tail \                      # Trim low-quality bases from 3’ end
+      --cut_window_size 4 \             # Sliding window of 4 bases
+      --cut_mean_quality 15 \           # Less aggressive than 20; keeps more reads
+      --length_required 25 \            # Minimum read length, slightly higher than 20
       --thread 4 \
       --html "$OUT_DIR/${BASE}_fastp.html" \
       --json "$OUT_DIR/${BASE}_fastp.json"
