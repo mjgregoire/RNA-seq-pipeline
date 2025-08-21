@@ -94,6 +94,40 @@ echo "Running FastQC on $FILE"
 fastqc "$FILE" --outdir ~{path to your folders here}`
 ```
 
+OR: 
+```
+#!/bin/bash
+#SBATCH -p day
+#SBATCH --job-name=fastqc
+#SBATCH --mail-type=ALL
+#SBATCH --mem=4G
+#SBATCH -t 2:00:00
+#SBATCH --output=logs/fastqc_%A_%a.out
+#SBATCH --error=logs/fastqc_%A_%a.err
+
+module load miniconda
+eval "$(conda shell.bash hook)"   # ensures conda works in sbatch
+conda activate rnaseq_tools
+
+cd /gpfs/gibbs/pi/guo/mg2684/GSE201407/fastqs
+
+# Make a list of all fastq.gz files
+FILES=( $(ls *.fastq.gz | sort) )
+NFILES=${#FILES[@]}
+
+# Safety check: prevent running out of range
+if [ "$SLURM_ARRAY_TASK_ID" -ge "$NFILES" ]; then
+    echo "Error: SLURM_ARRAY_TASK_ID ($SLURM_ARRAY_TASK_ID) >= number of FASTQ files ($NFILES)"
+    exit 1
+fi
+
+# Pick the correct file
+FILE=${FILES[$SLURM_ARRAY_TASK_ID]}
+
+echo "Running FastQC on $FILE"
+fastqc "$FILE" --outdir /gpfs/gibbs/pi/guo/mg2684/GSE201407/fastqs/fastqc_results
+```
+
 Run fastqc with: `sbatch fastqc.sh`
 Then compile all fastqc files into one using: `multiqc .`
 
