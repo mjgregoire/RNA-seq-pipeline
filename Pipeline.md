@@ -185,24 +185,34 @@ for R1 in "$IN_DIR"/*_1.fastq.gz; do
 
     echo "Trimming $BASE..."
 
+    # Estimate read length from the first read in the R1 file
+    # zcat prints the gzipped file, head -n 2 gets the first sequence and its header
+    READ_LEN=$(zcat "$R1" | head -n 2 | tail -n 1 | wc -c)
+    READ_LEN=$((READ_LEN - 1))  # subtract newline
+
+    # Set minimum length based on read length
+    if [ "$READ_LEN" -le 50 ]; then
+        MIN_LEN=20
+    else
+        MIN_LEN=50
+    fi
+
     fastp \
       -i "$R1" \
       -I "$R2" \
       -o "$OUT_DIR/${BASE}_R1.trimmed.fastq.gz" \
       -O "$OUT_DIR/${BASE}_R2.trimmed.fastq.gz" \
-      --detect_adapter_for_pe \         # Auto-detect adapters (keep)
-      --cut_front \                     # Trim low-quality bases from 5’ end
-      --cut_tail \                      # Trim low-quality bases from 3’ end
-      --cut_window_size 4 \             # Sliding window of 4 bases
-      --cut_mean_quality 15 \           # Less aggressive than 20; keeps more reads
-      --length_required 25 \            # Minimum read length, slightly higher than 20
+      --detect_adapter_for_pe \
+      --cut_front \
+      --cut_tail \
+      --cut_window_size 4 \
+      --cut_mean_quality 15 \
+      --length_required "$MIN_LEN" \
       --thread 4 \
       --html "$OUT_DIR/${BASE}_fastp.html" \
       --json "$OUT_DIR/${BASE}_fastp.json"
 
 done
-
-echo "All trimming done."
 ```
 Check the script is working while running with:
 ```
