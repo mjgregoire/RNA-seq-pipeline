@@ -164,39 +164,58 @@ To trim poor sequence quality or adapters on FASTQ files make and run the follow
 ```
 #!/bin/bash
 #SBATCH --job-name=fastp_trim
-#SBATCH --output=fastp_trim.out
-#SBATCH --error=fastp_trim.err
+#SBATCH --output=fastp_trim.%A_%a.out
+#SBATCH --error=fastp_trim.%A_%a.err
 #SBATCH --time=06:00:00
 #SBATCH --mem=16G
 #SBATCH --cpus-per-task=4
 #SBATCH --mail-type=ALL 
-# Load modules or activate conda
+
+# -----------------------------
+# Load conda safely
+# -----------------------------
 module purge
 module load miniconda
-source activate rnaseq_tools  
-# Define directories
-IN_DIR=~{path to your directory here}
-OUT_DIR=${IN_DIR}/trimmed_fastq
+eval "$(conda shell.bash hook)"
+conda activate rnaseq_tools
+
+# -----------------------------
+# Directories
+# -----------------------------
+IN_DIR=/gpfs/gibbs/pi/guo/mg2684/GSE201407/fastqs #change this to your directory!
+OUT_DIR="${IN_DIR}/trimmed_fastq"
 mkdir -p "$OUT_DIR"
+
+# -----------------------------
 # Trimming loop
+# -----------------------------
 for R1 in "$IN_DIR"/*_1.fastq.gz; do
     BASE=$(basename "$R1" _1.fastq.gz)
     R2="${IN_DIR}/${BASE}_2.fastq.gz"
 
-    echo "Trimming $BASE..."
+    # Skip if R2 doesn't exist
+    if [ ! -f "$R2" ]; then
+        echo "Skipping $BASE: paired file $R2 not found"
+        continue
+    fi
 
-    # Estimate read length from the first read in the R1 file
-    # zcat prints the gzipped file, head -n 2 gets the first sequence and its header
+    echo "Processing sample: $BASE"
+
+    # Estimate read length from the first read
     READ_LEN=$(zcat "$R1" | head -n 2 | tail -n 1 | wc -c)
-    READ_LEN=$((READ_LEN - 1))  # subtract newline
+    READ_LEN=$((READ_LEN - 1))
 
-    # Set minimum length based on read length
+    # Set minimum length depending on read length
     if [ "$READ_LEN" -le 50 ]; then
         MIN_LEN=20
     else
         MIN_LEN=50
     fi
 
+    # Extract accession folder (two levels up from fastq_results)
+    ACCESSION=$(basename "$(dirname "$(dirname "$IN_DIR")")")
+
+    # Run fastp
     fastp \
       -i "$R1" \
       -I "$R2" \
@@ -209,10 +228,12 @@ for R1 in "$IN_DIR"/*_1.fastq.gz; do
       --cut_mean_quality 15 \
       --length_required "$MIN_LEN" \
       --thread 4 \
-      --html "$OUT_DIR/${BASE}_fastp.html" \
-      --json "$OUT_DIR/${BASE}_fastp.json"
+      --html "$OUT_DIR/${BASE}_${ACCESSION}_fastp.html" \
+      --json "$OUT_DIR/${BASE}_${ACCESSION}_fastp.json"
 
 done
+
+echo "All trimming done."
 ```
 Check the script is working while running with:
 ```
