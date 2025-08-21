@@ -2,6 +2,30 @@
 **Purpose: Reproducible workflow for RNA-seq analysis. This project is currently in progress and will be updated regularly from Agust 2025 through and to November 2025**
 
 ## Log in to HPC and load conda
+Log in to HPC with OpenOnDemand GUI or via SSH. 
+
+To log in with SSH you need to create a specific key do this with the following:
+```
+ssh-keygen
+cat ~/YaleSSHkey.pub
+```
+Upload the key to Yale: https://sshkeys.ycrc.yale.edu/ 
+
+Check that you can SSH into the Yale HPC and have the proper settings: 
+```
+ssh -i ~/YaleSSHkey {your ID}@mccleary.ycrc.yale.edu
+nano ~/.ssh/config: Host mccleary
+    HostName mccleary.ycrc.yale.edu
+    User {your ID}
+    IdentityFile ~/YaleSSHkey
+chmod 600 ~/.ssh/config
+chmod 600 ~/YaleSSHkey
+chmod 700 ~/.ssh
+```
+Now you can use: `ssh -i ~/YaleSSHkey {your ID}@mccleary.ycrc.yale.edu`
+
+
+To work in the HPC you need to activate an environment with packages will we use for RNA seq qnalysis.
 Conda environment: rnaseq_tools (Packages: sra-tools, entrez-direct, fastqc, multiqc, samtools, etc...)
 
 `module load miniconda`
@@ -135,22 +159,7 @@ fastqc "$FILE" --outdir /gpfs/gibbs/pi/guo/mg2684/GSE201407/fastqs/fastqc_result
 Run fastqc with: `sbatch fastqc.sh`
 Then compile all fastqc files into one using: `multiqc .`
 
-To open the multiqc .html report you need to transfer the file to your local downloads folder. To do this you need to go to your local terminal. If you have not already set up an ssh key, do the following: 
-
-`ssh-keygen`
-`cat ~/YaleSSHkey.pub` and upload the key to Yale: https://sshkeys.ycrc.yale.edu/ 
-
-Check that you can SSH into the Yale HPC and have the proper settings: 
-```
-ssh -i ~/YaleSSHkey {your ID}@mccleary.ycrc.yale.edu
-nano ~/.ssh/config: Host mccleary
-    HostName mccleary.ycrc.yale.edu
-    User {your ID}
-    IdentityFile ~/YaleSSHkey
-chmod 600 ~/.ssh/config
-chmod 600 ~/YaleSSHkey
-chmod 700 ~/.ssh
-```
+To open the multiqc .html report you need to transfer the file to your local downloads folder. To do this you need to go to your local terminal. If you have not already set up an ssh key (see above loging into HPC section to login with SSH).
 
 On your terminal type the following to SSH into the HPC and download the file locally (this downloads to your Downloads folder): 
 `scp -i ~/YaleSSHkey {your ID}@transfer-mccleary.ycrc.yale.edu:{path to your accesion here}/fastqs/fastqc_results/multiqc_report.html \
