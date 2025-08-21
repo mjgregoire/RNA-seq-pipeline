@@ -109,7 +109,11 @@ module load miniconda
 eval "$(conda shell.bash hook)"   # ensures conda works in sbatch
 conda activate rnaseq_tools
 
-cd /gpfs/gibbs/pi/guo/mg2684/GSE201407/fastqs
+cd /gpfs/gibbs/pi/guo/mg2684/GSE201407/fastqs 
+#OR:
+# Use the directory you are in when you type sbatch
+#cd "$SLURM_SUBMIT_DIR" || exit 1   # exit if cd fails
+
 
 # Make a list of all fastq.gz files
 FILES=( $(ls *.fastq.gz | sort) )
