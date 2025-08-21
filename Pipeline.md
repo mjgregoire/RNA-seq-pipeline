@@ -247,22 +247,31 @@ Now you can re-Run FASTQC using the same script as before and check that the seq
 mkdir fastqc_results
 sbatch fastqc.sh
 
-    #!/bin/bash
-    #SBATCH -p day
-    #SBATCH --job-name=fastqc
-    #SBATCH --mail-type=ALL
-    #SBATCH --mem=4G
-    #SBATCH -t 2:00:00
-    #SBATCH --array=0-49
-    #SBATCH --output=logs/fastqc_%A_%a.out
-    #SBATCH --error=logs/fastqc_%A_%a.err
-    module load miniconda
-    conda activate rnaseq_tools
-    cd ~{your path here}
-    # Get the nth fastq.gz file
-    FILE=$(ls *.fastq.gz | sort | sed -n "$((SLURM_ARRAY_TASK_ID+1))p")
-    echo "Running FastQC on $FILE"
-    fastqc "$FILE" --outdir ~{your path here/fastqc_results}
+#!/bin/bash
+#SBATCH -p day
+#SBATCH --job-name=fastqc
+#SBATCH --mail-type=ALL
+#SBATCH --mem=4G
+#SBATCH -t 2:00:00
+#SBATCH --array=0-103
+#SBATCH --output=logs/fastqc_%A_%a.out
+#SBATCH --error=logs/fastqc_%A_%a.err
+
+module load miniconda
+eval "$(conda shell.bash hook)"
+conda activate rnaseq_tools
+
+cd /gpfs/gibbs/pi/guo/mg2684/ERP131847/fastqs/trimmed_fastq
+
+# Get the nth fastq.gz file
+FILE=$(ls *.fastq.gz | sort | sed -n "$((SLURM_ARRAY_TASK_ID+1))p")
+if [ -z "$FILE" ]; then
+    echo "No file found for SLURM_ARRAY_TASK_ID=$SLURM_ARRAY_TASK_ID"
+    exit 1
+fi
+
+echo "Running FastQC on $FILE"
+fastqc "$FILE" --outdir /gpfs/gibbs/pi/guo/mg2684/ERP131847/fastqs/trimmed_fastq/trimmed_fastqc_results
 
 #compile all fastqc files into one
 multiqc .
