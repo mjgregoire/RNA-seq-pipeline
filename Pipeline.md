@@ -162,7 +162,8 @@ Then compile all fastqc files into one using: `multiqc .`
 To open the multiqc .html report you need to transfer the file to your local downloads folder. To do this you need to go to your local terminal. If you have not already set up an ssh key (see above loging into HPC section to login with SSH).
 
 On your terminal type the following to SSH into the HPC and download the file locally (this downloads to your Downloads folder): 
-`scp -i ~/YaleSSHkey {your ID}@transfer-mccleary.ycrc.yale.edu:{path to your accesion here}/fastqs/fastqc_results/multiqc_report.html \
+`scp -i ~/YaleSSHkey {your ID}@transfer-mccleary.ycrc.yale.edu:{path to your accesion here}/fastqs/fastqc_results/multiqc_report.html \ #backslash is line continuation character and tells terminal to continue onto the next line
+
 ~/Downloads/multiqc_report_$(basename $(dirname $(dirname $(dirname /{path to your accession here}/fastqs/fastqc_results/multiqc_report.html)))).html`
 
 ## Trimming FASTQ files
