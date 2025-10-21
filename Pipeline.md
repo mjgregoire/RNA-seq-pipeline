@@ -89,7 +89,7 @@ SRR=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$ACC_LIST")
 echo "[$(date)] Task $SLURM_ARRAY_TASK_ID: Downloading $SRR"
 
 # --- DOWNLOAD ---
-fasterq-dump --split-files --threads 4 "$SRR"
+fasterq-dump --split-files --threads 4 --outdir fastq "$SRR"
 
 # --- COMPRESS OUTPUT ---
 gzip "${SRR}_1.fastq" "${SRR}_2.fastq"
