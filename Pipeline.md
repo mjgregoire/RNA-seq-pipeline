@@ -52,7 +52,7 @@ Or for European files: `wget -qO - {link to ENA e.g.: "https://www.ebi.ac.uk/ena
 
 ### Run FASTQ download script
 This bash script will convert .sra to .fastq files if applicable, and downloads and compresses fastq files.
-Create the script in your folder with: `nano fastq_array.sh`
+Create the script in your folder with: `nano download_fastq.slurm`
 
 ```
 #!/bin/bash
