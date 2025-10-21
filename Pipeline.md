@@ -48,7 +48,7 @@ Get the SRR accession list from SRA Project (SRP). But you *don't want to use th
 
 Use the following code to get SRR accession list: `esearch -db sra -query {SRA name here} | efetch -format runinfo | cut -d ',' -f 1 | grep SRR > Run_Acc_List.txt`
 
-Or for European files: `-qO - {link to ENA e.g.: "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=ERP131847&result=read_run&fields=run_accession"} | tail -n + 2 > Run_Acc_List.txt`
+Or for European files: `wget -qO - {link to ENA e.g.: "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=ERP131847&result=read_run&fields=run_accession"} | tail -n + 2 > Run_Acc_List.txt`
 
 ### Run FASTQ download script
 This bash script will convert .sra to .fastq files if applicable, and downloads and compresses fastq files.
