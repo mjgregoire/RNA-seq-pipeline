@@ -294,11 +294,46 @@ multiqc .
 mg2684@transfer-mccleary.ycrc.yale.edu:/gpfs/gibbs/pi/guo/mg2684/ERP131847/fastqs/trimmed_fastq/trimmed_fastqc_results/multiqc_report.html \
 ~/Downloads/multiqc_report_trimmed_$(basename $(dirname $(dirname $(dirname $(dirname /gpfs/gibbs/pi/guo/mg2684/ERP131847/fastqs/trimmed_fastq/trimmed_fastqc_results/multiqc_report.html))))).html
 ```
+#----ALIGNING FASTQ TO REFERENCE GENOME USING STAR----
+# Make a directory to store your references
+mkdir -p /gpfs/gibbs/pi/guo/mg2684/reference/gencode
+cd /gpfs/gibbs/pi/guo/mg2684/reference/gencode
 
+# Genome FASTA (GRCh38 primary assembly)
+wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_43/GRCh38.primary_assembly.genome.fa.gz
+gunzip GRCh38.primary_assembly.genome.fa.gz
 
-# Next steps:
-# -------------------------------
-# - align with STAR or HISAT2
+# Annotation GTF
+wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_43/gencode.v43.annotation.gtf.gz
+gunzip gencode.v43.annotation.gtf.gz
+
+In bash script directory:
+```
+#!/bin/bash
+#SBATCH --job-name=STAR_index
+#SBATCH --output=STAR_index_%j.out
+#SBATCH --error=STAR_index_%j.err
+#SBATCH --time=12:00:00
+#SBATCH --cpus-per-task=12
+#SBATCH --mem=60G
+
+module load STAR/2.7.11b
+
+GENOME_FASTA=/gpfs/gibbs/pi/guo/mg2684/reference/gencode/GRCh38.primary_assembly.genome.fa
+ANNOTATION_GTF=/gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf
+STAR_INDEX_DIR=/gpfs/gibbs/pi/guo/mg2684/reference/STAR_index_GRCh38
+
+mkdir -p $STAR_INDEX_DIR
+
+STAR --runThreadN 12 \
+     --runMode genomeGenerate \
+     --genomeDir $STAR_INDEX_DIR \
+     --genomeFastaFiles $GENOME_FASTA \
+     --sjdbGTFfile $ANNOTATION_GTF \
+     --sjdbOverhang 148
+```
+
+     
 # - quantify with featureCounts or Salmon
 # - downstream DE analysis with DESeq2 / edgeR
 
