@@ -56,29 +56,49 @@ Create the script in your folder with: `nano fastq_array.sh`
 
 ```
 #!/bin/bash
-###Run on day partition### 
 #SBATCH -p day
-###name job###  
 #SBATCH --job-name=fastq_array
-###request 1 GB memory###
 #SBATCH --mem-per-cpu=1G
-###request 6 hours worth of time### #or might need more time depending on size and number of files
 #SBATCH -t 6:00:00
-###create email trail###
 #SBATCH --mail-type=ALL
 #SBATCH --output=logs/fastq_%A_%a.out
 #SBATCH --error=logs/fastq_%A_%a.err
-#SBATCH --array=0-24     # Adjust if you have more or fewer SRRs
+
 module load miniconda
 conda activate rnaseq_tools
-cd ~{path to your directory here}
-SRR=$(sed -n "$((SLURM_ARRAY_TASK_ID+1))p" SRR_Acc_List.txt) 
-echo "[$(date)] Downloading $SRR"
-fasterq-dump --split-files --threads 4 "$SRR" 
-gzip ${SRR}_1.fastq ${SRR}_2.fastq
+
+# --- SETUP ---
+WORKDIR="/gpfs/gibbs/pi/guo/mg2684/ERP126666"   # <-- change to your path
+ACC_LIST="${WORKDIR}/SRR_Acc_List.txt"          # or Run_Acc_List.txt if you used that name
+
+cd "$WORKDIR"
+
+# --- DETERMINE ARRAY SIZE ---
+NUM_JOBS=$(wc -l < "$ACC_LIST")
+ARRAY_MAX=$((NUM_JOBS - 1))
+
+# If SLURM_ARRAY_TASK_ID is not set (e.g., running interactively), exit
+if [ -z "$SLURM_ARRAY_TASK_ID" ]; then
+    echo "This script is meant to be run with sbatch using --array=0-${ARRAY_MAX}"
+    exit 1
+fi
+
+# --- GET SRR ID ---
+SRR=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$ACC_LIST")
+
+echo "[$(date)] Task $SLURM_ARRAY_TASK_ID: Downloading $SRR"
+
+# --- DOWNLOAD ---
+fasterq-dump --split-files --threads 4 "$SRR"
+
+# --- COMPRESS OUTPUT ---
+gzip "${SRR}_1.fastq" "${SRR}_2.fastq"
+
+echo "[$(date)] Finished $SRR"
 ```
 
-Run the script with the following commmand: `sbatch fastq_array.sh`
+Run the script with the following commmand: `NUM=$(wc -l < SRR_Acc_List.txt)
+sbatch --array=0-$((NUM-1)) download_fastq.slurm`
 Using sbatch on bash scripts will send them to an available cluster and they will run in the background until completed, the time runs out, or they run into an error. You can at this point run other scripts or leave the command line and your script should still run. 
 
 **Verify output from download**
