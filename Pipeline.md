@@ -97,8 +97,7 @@ gzip "${SRR}_1.fastq" "${SRR}_2.fastq"
 echo "[$(date)] Finished $SRR"
 ```
 
-Run the script with the following commmand: `NUM=$(wc -l < SRR_Acc_List.txt)
-sbatch --array=0-$((NUM-1)) download_fastq.slurm`
+Run the script with the following commmand: `sbatch --array=0-$(( $(wc -l < Run_Acc_List.txt) - 1 )) download_fastq.slurm`
 Using sbatch on bash scripts will send them to an available cluster and they will run in the background until completed, the time runs out, or they run into an error. You can at this point run other scripts or leave the command line and your script should still run. 
 
 **Verify output from download**
