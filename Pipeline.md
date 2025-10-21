@@ -317,7 +317,7 @@ In bash script directory:
 #SBATCH --cpus-per-task=12
 #SBATCH --mem=60G
 
-module load STAR/2.7.11b
+module load STAR/2.7.11a-GCC-12.2.0
 
 GENOME_FASTA=/gpfs/gibbs/pi/guo/mg2684/reference/gencode/GRCh38.primary_assembly.genome.fa
 ANNOTATION_GTF=/gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf
@@ -332,7 +332,7 @@ STAR --runThreadN 12 \
      --sjdbGTFfile $ANNOTATION_GTF \
      --sjdbOverhang 148
 ```
-
+`sbatch star_index.sh`
      
 # - quantify with featureCounts or Salmon
 # - downstream DE analysis with DESeq2 / edgeR
