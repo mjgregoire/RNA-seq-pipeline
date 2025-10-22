@@ -1,4 +1,4 @@
-## Log in to HPC and load conda
+## Log in to HPC
 Log in to HPC with [OpenOnDemand GUI](https://docs.ycrc.yale.edu/clusters-at-yale/access/ood/) or via SSH on your computer's terminal. 
 
 To log in with SSH you need to create a specific key do this with the following:
@@ -21,7 +21,7 @@ chmod 700 ~/.ssh
 ```
 Now you can use: `ssh -i ~/YaleSSHkey {your ID}@mccleary.ycrc.yale.edu`
 
-
+## Load conda environment
 To work in the HPC you need to activate an environment with packages will we use for RNA seq qnalysis.
 Conda environment: rnaseq_tools (Packages: sra-tools, entrez-direct, fastqc, multiqc, samtools, etc...)
 
