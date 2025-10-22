@@ -1,13 +1,13 @@
-## ALIGNING FASTQ TO REFERENCE GENOME USING STAR
-# Make a directory to store your references
+# ALIGNING FASTQ TO REFERENCE GENOME USING STAR
+## Make a directory to store your references
 mkdir -p /gpfs/gibbs/pi/guo/mg2684/reference/gencode
 cd /gpfs/gibbs/pi/guo/mg2684/reference/gencode
 
-# Genome FASTA (GRCh38 primary assembly)
+## Genome FASTA (GRCh38 primary assembly)
 wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_43/GRCh38.primary_assembly.genome.fa.gz
 gunzip GRCh38.primary_assembly.genome.fa.gz
 
-# Annotation GTF
+## Annotation GTF
 wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_43/gencode.v43.annotation.gtf.gz
 gunzip gencode.v43.annotation.gtf.gz
 
