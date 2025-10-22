@@ -35,3 +35,7 @@ This was installed via:
 You can check what packages are you the environment with `conda list`.
 
 With the environment loaded you can install things needed in it later with the `conda install -c bioconda {package}` code
+
+## Set up/go to working directory
+`mkdir {path to your directory here, make an RNA seq folder and then sub folders for each project}`
+`cd {path to your directory}`
