@@ -17,6 +17,7 @@ wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_43/gencod
 gunzip gencode.v43.annotation.gtf.gz
 ```
 
+## Make reference index
 In bash script directory:
 ```
 #!/bin/bash
@@ -44,6 +45,7 @@ STAR --runThreadN 12 \
 ```
 `sbatch star_index.sh`
 
+## Align
 ```
 nano STAR_align_array.sh
 
@@ -80,3 +82,4 @@ STAR \
 --outSAMtype BAM SortedByCoordinate \
 --quantMode GeneCounts
 ```
+`sbatch STAR_align_array.sh`
