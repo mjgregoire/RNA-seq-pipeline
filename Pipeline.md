@@ -389,7 +389,10 @@ STAR \
 --outSAMtype BAM SortedByCoordinate \
 --quantMode GeneCounts
 ```
-# - quantify with featureCounts or Salmon
-# - downstream DE analysis with DESeq2 / edgeR
+# next steps aftr alignment
+
+## for looking at cryptic splicing
+
+
 
 echo "[$(date)] RNA-seq data download pipeline complete."
