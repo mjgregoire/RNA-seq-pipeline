@@ -33,7 +33,8 @@ Conda environment: rnaseq_tools (Packages: sra-tools, entrez-direct, fastqc, mul
 
 This was installed via: 
 
-`conda install -c bioconda {package}` `conda create -n{name} -c bioconda {packages separated by spaces}`
+`conda install -c bioconda {package}` `conda create -n{name} -c bioconda {packages separated by spaces}` 
+ex: `conda install -c conda-forge r-base`
 
 You can check what packages are you the environment with `conda list`.
 
@@ -389,7 +390,69 @@ STAR \
 --outSAMtype BAM SortedByCoordinate \
 --quantMode GeneCounts
 ```
-# next steps aftr alignment
+# next steps after alignment
+set up spliceLauncher
+
+download:
+```
+cd ~/tools
+git clone https://github.com/LBGC-CFB/SpliceLauncher.git
+cd SpliceLauncher
+```
+setup:
+While in your rnaseq_tools environment
+`conda activate rnaseq_tools`
+Add the script folder to your PATH (replace with your actual path)
+`echo 'export PATH=$PATH:/home/mg2684/tools/SpliceLauncher' >> ~/.bashrc`
+Apply the change for this session
+`source ~/.bashrc`
+
+edit config file: (nano the config file in the SpliceLauncher folder)
+```
+# Software paths
+samtools="samtools"
+bedtools="bedtools"
+STAR="STAR"
+Rscript="Rscript"
+perl="perl"
+
+# Reference genome
+genome="/gpfs/gibbs/pi/guo/mg2684/reference/gencode/GRCh38.primary_assembly.genome.fa"
+
+# Output from generateSpliceLauncherDB.r script (to be created later)
+SJDBannot=""
+spliceLaucherAnnot=""
+BEDrefPath=""
+```
+get gtf file for SpliceLauncher:
+```
+# 1) download the UCSC NCBI RefSeq GTF for hg38 
+wget https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/genes/hg38.ncbiRefSeq.gtf.gz \
+  -O /gpfs/gibbs/pi/guo/mg2684/reference/gencode/hg38.ncbiRefSeq.gtf.gz
+
+# 3) unzip
+gunzip -c /gpfs/gibbs/pi/guo/mg2684/reference/gencode/hg38.ncbiRefSeq.gtf.gz \
+  > /gpfs/gibbs/pi/guo/mg2684/reference/gencode/hg38.ncbiRefSeq.gtf
+```
+
+make SpliceLauncher.db
+```
+#!/bin/bash
+#SBATCH --mail-type=ALL
+#SBATCH --job-name=spliceDB_build
+#SBATCH --output=spliceDB_build.log
+#SBATCH --error=spliceDB_build.err
+#SBATCH --time=06:00:00
+#SBATCH --mem=128G
+#SBATCH --cpus-per-task=8
+#SBATCH --partition=day
+module purge
+module load R/4.4.1-foss-2022b
+Rscript /gpfs/gibbs/pi/guo/mg2684/tools/SpliceLauncher/scripts/generateSpliceLauncherDB.r \
+  -i /gpfs/gibbs/pi/guo/mg2684/reference/gencode/hg38.ncbiRefSeq.gff \
+  -o /gpfs/gibbs/pi/guo/mg2684/GSE201407/splicelauncher_db/
+```
+sbatch SpliceLauncher.db
 
 ## for looking at cryptic splicing
 
