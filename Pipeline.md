@@ -572,6 +572,19 @@ suppressPackageStartupMessages({
   library(GenomicFeatures)
   library(dplyr)
   library(readr)
+  library(BiocParallel)
+
+  args <- commandArgs(trailingOnly = TRUE)
+
+  # Optional: parse a --threads argument
+  threads <- 1
+  if (any(grepl("--threads", args))) {
+    threads <- as.numeric(sub("--threads=", "", args[grepl("--threads", args)]))
+  }
+
+  register(MulticoreParam(threads))
+  cat(paste0("🧵 Using ", threads, " threads for parallel processing.\n"))
+
   suppressWarnings({
     if (requireNamespace("txdbmaker", quietly = TRUE)) {
       library(txdbmaker)
@@ -597,7 +610,7 @@ message("✔ TxDb loaded successfully")
 introns_by_tx <- intronsByTranscript(txdb, use.names = TRUE)
 
 # Convert to data frame with transcript IDs included, skipping empty ones
-introns_list <- lapply(names(introns_by_tx), function(tx) {
+introns_list <- bplapply(names(introns_by_tx), function(tx) {
   gr <- introns_by_tx[[tx]]
   if (length(gr) == 0) return(NULL)  # skip single-exon transcripts
   df <- as.data.frame(gr)
@@ -637,7 +650,28 @@ write_tsv(junction_to_gene, "junction_to_gene.tsv")
 message("✅ Wrote junction_to_gene.tsv with ", nrow(junction_to_gene), " junctions.")
 message("🧬 Mapped ", length(unique(junction_to_gene$gene_id)), " unique genes.")
 
-Rscript make_junction_to_gene_map.R
+
+nano run_make_junction_to_gene_map.sh
+
+#!/bin/bash
+#SBATCH --job-name=jxn_to_gene
+#SBATCH --output=jxn_to_gene_%j.log
+#SBATCH --error=jxn_to_gene_%j.err
+#SBATCH --time=12:00:00
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
+#SBATCH --mail-type=ALL
+
+# Load modules (use your cluster’s available versions)
+module purge
+module load R-bundle-Bioconductor/3.19-foss-2022b-R-4.4.1
+
+# Run your R script with parallelization support
+Rscript make_junction_to_gene_map.R \
+  --gtf /gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf \
+  --junctions ./SJ.out.tab \
+  --output ./junction_to_gene_map.tsv \
+  --threads 8
 ```
 ## normalize
 ```
