@@ -390,79 +390,15 @@ STAR \
 --outSAMtype BAM SortedByCoordinate \
 --quantMode GeneCounts
 ```
-# next steps after alignment
-set up spliceLauncher --- not actually using but useful for downloading gtfs
 
-download:
-```
-cd ~/tools
-git clone https://github.com/LBGC-CFB/SpliceLauncher.git
-cd SpliceLauncher
-```
-setup:
-While in your rnaseq_tools environment
-`conda activate rnaseq_tools`
-Add the script folder to your PATH (replace with your actual path)
-`echo 'export PATH=$PATH:/home/mg2684/tools/SpliceLauncher' >> ~/.bashrc`
-Apply the change for this session
-`source ~/.bashrc`
-
-edit config file: (nano the config file in the SpliceLauncher folder)
-```
-# Software paths
-samtools="samtools"
-bedtools="bedtools"
-STAR="STAR"
-Rscript="Rscript"
-perl="perl"
-
-# Reference genome
-genome="/gpfs/gibbs/pi/guo/mg2684/reference/gencode/GRCh38.primary_assembly.genome.fa"
-
-# Output from generateSpliceLauncherDB.r script (to be created later)
-SJDBannot=""
-spliceLaucherAnnot=""
-BEDrefPath=""
-```
-get gtf file for SpliceLauncher:
-```
-# 1) download the UCSC NCBI RefSeq GTF for hg38 
-wget https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/genes/hg38.ncbiRefSeq.gtf.gz \
-  -O /gpfs/gibbs/pi/guo/mg2684/reference/gencode/hg38.ncbiRefSeq.gtf.gz
-
-# 3) unzip
-gunzip -c /gpfs/gibbs/pi/guo/mg2684/reference/gencode/hg38.ncbiRefSeq.gtf.gz \
-  > /gpfs/gibbs/pi/guo/mg2684/reference/gencode/hg38.ncbiRefSeq.gtf
-```
-
-make SpliceLauncher.db
-```
-#!/bin/bash
-#SBATCH --mail-type=ALL
-#SBATCH --job-name=spliceDB_build
-#SBATCH --output=spliceDB_build.log
-#SBATCH --error=spliceDB_build.err
-#SBATCH --time=06:00:00
-#SBATCH --mem=128G
-#SBATCH --cpus-per-task=8
-#SBATCH --partition=day
-module purge
-module load R/4.4.1-foss-2022b
-Rscript /gpfs/gibbs/pi/guo/mg2684/tools/SpliceLauncher/scripts/generateSpliceLauncherDB.r \
-  -i /gpfs/gibbs/pi/guo/mg2684/reference/gencode/hg38.ncbiRefSeq.gff \
-  -o /gpfs/gibbs/pi/guo/mg2684/GSE201407/splicelauncher_db/
-```
-sbatch SpliceLauncher.db
-
-## for looking at cryptic splicing
-## --- LOOKING AT SPLICING VIA JUNCTION COUNTS ---
-1) Extract STAR junction counts (fast, per-sample)
+# --- LOOKING AT SPLICING VIA JUNCTION COUNTS ---
+## 1) Extract STAR junction counts (fast, per-sample)
 `cd /path/to/star_output   # change this to your actual path`
 
-# make a folder to store the extracted junction count files
+### make a folder to store the extracted junction count files
 `mkdir -p junction_counts`
 
-# loop over all SJ.out.tab files
+### loop over all SJ.out.tab files
 ```
 for f in *_SJ.out.tab; do
 sample_name=$(basename "$f" _SJ.out.tab)
@@ -473,13 +409,13 @@ echo "Processed ${sample_name}"
 done
 ```
 
-2) Collect total mapped reads per sample (needed for normalization later)
+## 2) Collect total mapped reads per sample (needed for normalization later)
 `cd /path/to/star_output`
 
-# create output file for total mapped reads
+### create output file for total mapped reads
 `echo -e "SAMPLE\tMAPPED_READS" > sample_mapped_reads.tsv`
 
-# extract "Uniquely mapped reads number" from each Log.final.out
+### extract "Uniquely mapped reads number" from each Log.final.out
 ```
 for f in *_Log.final.out; do
 sample_name=$(basename "$f" _Log.final.out)
@@ -489,19 +425,13 @@ echo "Extracted mapped reads for ${sample_name}"
 done
 ```
 
-3) Run featureCounts to get gene-level counts
+## 3) Run featureCounts to get gene-level counts
 Make sure you have:
 	•	All your sorted BAMs in /path/to/star_output/ (they end with _Aligned.sortedByCoord.out.bam)
 	•	Your GTF annotation file (for example: /path/to/annotation/gencode.vM33.annotation.gtf)
 	•	featureCounts installed (part of the Subread package)
 
-```
-featureCounts -T 8 -p -t exon -g gene_id \
-  -a /gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf \
-  -o gene_counts.txt \
-  /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/SRR*_Aligned.sortedByCoord.out.bam
-```
-or via sbatch
+via sbatch:
 
 ```
 nano featureCounts
