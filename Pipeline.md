@@ -552,27 +552,12 @@ RPKM = gene counts / gene length in kb x total mapped reads in millions
 This scales each junction by how expressed its parent gene is, letting you compare junction usage across samples or between known targets.
 
 ## make junction to gene map
-make sure that rnaseq_tools environment is loaded, then install GenomicFeatures into R:
-```
-nano install_genomicfeatures.sh
+make sure that base R environment is loaded contains GenomicFeatures:
 
-#!/bin/bash
-#SBATCH --job-name=install_genomicfeatures
-#SBATCH --mem=32G
-#SBATCH --time=04:00:00
-#SBATCH --output=install_genomicfeatures.out
-#SBATCH --error=install_genomicfeatures.err
+# Activate your R environment
+module load R-bundle-Bioconductor/3.19-foss-2022b-R-4.4.1
 
-module load R/4.3.1  # or whatever R version your cluster uses
-
-Rscript - <<'EOF'
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-BiocManager::install("GenomicFeatures", ask = FALSE, update = FALSE)
-EOF
-
-sbatch install_genomicfeatures.sh
-```
+make sure you are in cluster not login node! `salloc`
 
 ```
 nano make_junction_to_gene_map.R
@@ -620,6 +605,8 @@ junction_to_gene <- junction_to_gene %>%
 # === 5. Save mapping ===
 write_tsv(junction_to_gene, "junction_to_gene.tsv")
 message("✅ Wrote junction_to_gene.tsv with ", nrow(junction_to_gene), " junctions.")
+
+Rscript make_junction_to_gene_map.R
 ```
 ## normalize
 ```
