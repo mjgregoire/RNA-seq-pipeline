@@ -565,8 +565,8 @@ nano make_junction_to_gene_map.R
 #!/usr/bin/env Rscript
 
 # === make_junction_to_gene_map.R ===
-# Create a junction-to-gene mapping table from a GTF annotation
-# Compatible with Bioconductor/GenomicFeatures or txdbmaker
+# Create a junction-to-gene mapping table from a GTF annotation.
+# Compatible with GenomicFeatures or txdbmaker, including Bioconductor ≥3.18.
 
 suppressPackageStartupMessages({
   library(GenomicFeatures)
@@ -591,23 +591,26 @@ if ("txdbmaker" %in% .packages()) {
 } else {
   txdb <- makeTxDbFromGFF(gtf_file, format = "gtf")
 }
-
 message("✔ TxDb loaded successfully")
 
-# === 2. Extract exons and introns ===
-exons_by_tx <- exonsBy(txdb, by = "tx")
+# === 2. Extract introns per transcript ===
 introns_by_tx <- intronsByTranscript(txdb, use.names = TRUE)
 
-# Flatten GRangesList to GRanges, ensuring unique names
-introns_flat <- unlist(introns_by_tx)
-names(introns_flat) <- make.unique(names(introns_flat))
-introns_df <- as.data.frame(introns_flat, row.names = NULL)
+# Convert to data frame with transcript IDs included, skipping empty ones
+introns_list <- lapply(names(introns_by_tx), function(tx) {
+  gr <- introns_by_tx[[tx]]
+  if (length(gr) == 0) return(NULL)  # skip single-exon transcripts
+  df <- as.data.frame(gr)
+  df$tx_id <- tx
+  df
+})
+introns_list <- introns_list[!sapply(introns_list, is.null)]
 
+introns_df <- bind_rows(introns_list)
 message("✔ Extracted and flattened introns (", nrow(introns_df), " entries)")
 
-# === 3. Clean up and annotate ===
+# === 3. Clean up and format ===
 introns_df <- introns_df %>%
-  dplyr::select(seqnames, start, end, strand, tx_id) %>%
   mutate(
     intron_start = start,
     intron_end = end,
@@ -618,7 +621,6 @@ introns_df <- introns_df %>%
 
 # === 4. Map transcripts to genes ===
 tx2gene <- select(txdb, keys(txdb, "TXID"), columns = c("TXID", "GENEID"), keytype = "TXID")
-
 introns_df <- left_join(introns_df, tx2gene, by = c("tx_id" = "TXID"))
 
 # === 5. Collapse to unique intron–gene pairs ===
@@ -630,7 +632,10 @@ junction_to_gene <- introns_df %>%
 
 # === 6. Write output ===
 write_tsv(junction_to_gene, "junction_to_gene.tsv")
+
+# === 7. Log summary ===
 message("✅ Wrote junction_to_gene.tsv with ", nrow(junction_to_gene), " junctions.")
+message("🧬 Mapped ", length(unique(junction_to_gene$gene_id)), " unique genes.")
 
 Rscript make_junction_to_gene_map.R
 ```
