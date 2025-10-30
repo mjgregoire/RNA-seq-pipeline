@@ -501,4 +501,25 @@ featureCounts -T 8 -p -t exon -g gene_id \
   -o gene_counts.txt \
   /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/SRR*_Aligned.sortedByCoord.out.bam
 ```
+or via sbatch
 
+```
+nano featureCounts
+
+#!/bin/bash
+#SBATCH --job-name=featureCounts
+#SBATCH --output=featureCounts_%j.out
+#SBATCH --error=featureCounts_%j.err
+#SBATCH --time=4:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=32G
+
+module load subread  # if your cluster uses module system
+featureCounts -T 8 -p -t exon -g gene_id \
+  -a /gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf \
+  -o /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/gene_counts.txt \
+  /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/SRR*_Aligned.sortedByCoord.out.bam
+
+sbatch featureCounts
+```
