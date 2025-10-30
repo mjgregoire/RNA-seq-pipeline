@@ -453,3 +453,94 @@ featureCounts -T 8 -p -t exon -g gene_id \
 
 sbatch featureCounts
 ```
+```
+column -t gene_counts.txt.summary | less -S
+ex:
+Status                         /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/SRR18907>
+Assigned                       50791756                                                >
+Unassigned_Unmapped            0                                                       >
+Unassigned_Read_Type           0                                                       >
+Unassigned_Singleton           0                                                       >
+Unassigned_MappingQuality      0                                                       >
+Unassigned_Chimera             0                                                       >
+Unassigned_FragmentLength      0                                                       >
+Unassigned_Duplicate           0                                                       >
+Unassigned_MultiMapping        5516900                                                 >
+Unassigned_Secondary           0                                                       >
+Unassigned_NonSplit            0                                                       >
+Unassigned_NoFeatures          3482920                                                 >
+Unassigned_Overlapping_Length  0                                                       >
+Unassigned_Ambiguity           5729377                                                 
+```
+Overall there are: ~50.8M Assigned / (50.8 + 5.5 + 3.5 + 5.7 = 65.5M total)
+→ ≈ 77–78% of reads assigned
+Good range for high-quality RNA-seq.
+
+# 4) merege junction counts
+```
+nano merge_junctions_and_compute_JPM.R
+
+#!/usr/bin/env Rscript
+# merge_junctions_and_compute_JPM.R
+library(data.table)
+
+# paths - change if needed
+junc_dir <- "junction_counts"
+mapped_file <- "sample_mapped_reads.tsv"   # from previous step
+out_merged <- "merged_junction_counts.tsv"
+
+# read per-sample junction files
+files <- list.files(junc_dir, pattern="*.junction_counts.tsv", full.names=TRUE)
+if(length(files)==0) stop("No junction files found in junction_counts/")
+
+lst <- lapply(files, function(f){
+  dt <- fread(f, header=TRUE)
+  samp <- sub("\\.junction_counts\\.tsv$","", basename(f))
+  setnames(dt, c("JUNC","COUNT"))
+  setnames(dt, "COUNT", samp)
+  return(dt)
+})
+
+# merge all by JUNC
+merged <- Reduce(function(x,y) merge(x,y,by="JUNC", all=TRUE), lst)
+merged[is.na(merged)] <- 0
+fwrite(merged, out_merged, sep="\t")
+cat("Wrote", out_merged, "\n")
+
+# compute JPM and write long table for downstream merging
+mapped <- fread(mapped_file) # columns: SAMPLE \t MAPPED_READS
+mapped_vec <- setNames(mapped$MAPPED_READS, mapped$SAMPLE)
+
+# make JPM table
+jpm <- copy(merged)
+sample_cols <- colnames(jpm)[-1]
+for(s in sample_cols){
+  if(! s %in% names(mapped_vec)) stop(paste("Mapped reads missing for", s))
+  jpm[[s]] <- (jpm[[s]] * 1e6) / mapped_vec[[s]]
+}
+fwrite(jpm, "junctions_JPM.tsv", sep="\t")
+cat("Wrote junctions_JPM.tsv\n")
+
+nano run_merge_junctions.sh
+
+#!/bin/bash
+#SBATCH --job-name=merge_junctions
+#SBATCH --output=merge_junctions_%j.out
+#SBATCH --error=merge_junctions_%j.err
+#SBATCH --time=02:00:00        # adjust as needed
+#SBATCH --mem=32G              # adjust if you have many samples
+#SBATCH --cpus-per-task=4
+#SBATCH --mail-type=ALL
+
+# Load R if it's a module
+module load R/4.3.1   # or whatever version your cluster uses
+
+# (Optional) activate conda environment if you’re using one
+# source activate rnaseq_tools
+
+# Move to your working directory
+cd /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output
+
+# Run the R script
+Rscript /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/merge_junctions_and_compute_JPM.R
+```
