@@ -642,7 +642,7 @@ tx <- transcripts(txdb, columns = c("tx_id", "gene_id"))
 tx2gene <- as.data.frame(mcols(tx)) %>%
   select(tx_id, gene_id) %>%
   distinct()
-introns_df <- left_join(introns_df, tx2gene, by = c("tx_id" = "TXID"))
+introns_df <- left_join(introns_df, tx2gene, by = "tx_id")
 
 # === 5. Collapse to unique intron–gene pairs ===
 junction_to_gene <- introns_df %>%
