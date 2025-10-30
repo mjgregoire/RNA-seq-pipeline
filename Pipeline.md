@@ -579,11 +579,16 @@ suppressPackageStartupMessages({
   # Optional: parse a --threads argument
   threads <- 1
   if (any(grepl("--threads", args))) {
-    threads <- as.numeric(sub("--threads=", "", args[grepl("--threads", args)]))
+    parsed <- suppressWarnings(
+      as.numeric(sub("--threads=", "", args[grepl("--threads", args)]))
+    )
+    if (!is.na(parsed) && parsed > 0) {
+      threads <- parsed
+    }
   }
 
-  register(MulticoreParam(threads))
   cat(paste0("🧵 Using ", threads, " threads for parallel processing.\n"))
+  register(MulticoreParam(threads))
 
   suppressWarnings({
     if (requireNamespace("txdbmaker", quietly = TRUE)) {
@@ -633,7 +638,10 @@ introns_df <- introns_df %>%
   select(chrom, intron_start, intron_end, strand, tx_id)
 
 # === 4. Map transcripts to genes ===
-tx2gene <- select(txdb, keys(txdb, "TXID"), columns = c("TXID", "GENEID"), keytype = "TXID")
+tx <- transcripts(txdb, columns = c("tx_id", "gene_id"))
+tx2gene <- as.data.frame(mcols(tx)) %>%
+  select(tx_id, gene_id) %>%
+  distinct()
 introns_df <- left_join(introns_df, tx2gene, by = c("tx_id" = "TXID"))
 
 # === 5. Collapse to unique intron–gene pairs ===
@@ -654,24 +662,18 @@ message("🧬 Mapped ", length(unique(junction_to_gene$gene_id)), " unique genes
 nano run_make_junction_to_gene_map.sh
 
 #!/bin/bash
-#SBATCH --job-name=jxn_to_gene
-#SBATCH --output=jxn_to_gene_%j.log
-#SBATCH --error=jxn_to_gene_%j.err
-#SBATCH --time=12:00:00
+#SBATCH --job-name=jxn_map
+#SBATCH --output=jxn_map_%j.out
+#SBATCH --error=jxn_map_%j.err
+#SBATCH --time=04:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --mail-type=ALL
 
-# Load modules (use your cluster’s available versions)
-module purge
+module --force purge
 module load R-bundle-Bioconductor/3.19-foss-2022b-R-4.4.1
 
-# Run your R script with parallelization support
-Rscript make_junction_to_gene_map.R \
-  --gtf /gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf \
-  --junctions ./SJ.out.tab \
-  --output ./junction_to_gene_map.tsv \
-  --threads 8
+Rscript make_junction_to_gene_map.R --threads=8
 ```
 ## normalize
 ```
