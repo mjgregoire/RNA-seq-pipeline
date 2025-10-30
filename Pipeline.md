@@ -391,7 +391,7 @@ STAR \
 --quantMode GeneCounts
 ```
 # next steps after alignment
-set up spliceLauncher
+set up spliceLauncher --- not actually using but useful for downloading gtfs
 
 download:
 ```
@@ -455,7 +455,45 @@ Rscript /gpfs/gibbs/pi/guo/mg2684/tools/SpliceLauncher/scripts/generateSpliceLau
 sbatch SpliceLauncher.db
 
 ## for looking at cryptic splicing
+## --- LOOKING AT SPLICING VIA JUNCTION COUNTS ---
+1) Extract STAR junction counts (fast, per-sample)
+cd /path/to/star_output   # change this to your actual path
+
+# make a folder to store the extracted junction count files
+mkdir -p junction_counts
+
+# loop over all SJ.out.tab files
+for f in *_SJ.out.tab; do
+sample_name=$(basename "$f" _SJ.out.tab)
+awk 'BEGIN{OFS="\t"}{print $1":"$2"-"$3":"$4, $6}' "$f" \
+> "junction_counts/${sample_name}.junction_counts.tsv"
+sed -i '1iJUNC\tCOUNT' "junction_counts/${sample_name}.junction_counts.tsv"
+echo "Processed ${sample_name}"
+done
+
+2) Collect total mapped reads per sample (needed for normalization later)
+cd /path/to/star_output
+
+# create output file for total mapped reads
+echo -e "SAMPLE\tMAPPED_READS" > sample_mapped_reads.tsv
+
+# extract "Uniquely mapped reads number" from each Log.final.out
+for f in *_Log.final.out; do
+sample_name=$(basename "$f" _Log.final.out)
+mapped=$(grep "Uniquely mapped reads number" "$f" | awk '{print $6}')
+echo -e "${sample_name}\t${mapped}" >> sample_mapped_reads.tsv
+echo "Extracted mapped reads for ${sample_name}"
+done
+
+3) Run featureCounts to get gene-level counts
+Make sure you have:
+	•	All your sorted BAMs in /path/to/star_output/ (they end with _Aligned.sortedByCoord.out.bam)
+	•	Your GTF annotation file (for example: /path/to/annotation/gencode.vM33.annotation.gtf)
+	•	featureCounts installed (part of the Subread package)
 
 
+featureCounts -T 8 -p -t exon -g gene_id \
+  -a /gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf \
+  -o gene_counts.txt \
+  /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/SRR*_Aligned.sortedByCoord.out.bam
 
-echo "[$(date)] RNA-seq data download pipeline complete."
