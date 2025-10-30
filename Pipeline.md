@@ -562,47 +562,73 @@ make sure you are in cluster not login node! `salloc`
 ```
 nano make_junction_to_gene_map.R
 
-# make_junction_to_gene_map.R
-library(GenomicFeatures)
-library(dplyr)
-library(readr)
+#!/usr/bin/env Rscript
+
+# === make_junction_to_gene_map.R ===
+# Create a junction-to-gene mapping table from a GTF annotation
+# Compatible with Bioconductor/GenomicFeatures or txdbmaker
+
+suppressPackageStartupMessages({
+  library(GenomicFeatures)
+  library(dplyr)
+  library(readr)
+  suppressWarnings({
+    if (requireNamespace("txdbmaker", quietly = TRUE)) {
+      library(txdbmaker)
+    }
+  })
+})
 
 # === Input files ===
 gtf_file <- "/gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf"
 junction_file <- "merged_junction_counts.tsv"
 
-# === 1. Load GTF as a TxDb ===
-txdb <- makeTxDbFromGFF(gtf_file, format = "gtf")
+message("📘 Loading GTF annotation: ", gtf_file)
 
-# Extract exons and infer introns per transcript
+# === 1. Load GTF as a TxDb ===
+if ("txdbmaker" %in% .packages()) {
+  txdb <- txdbmaker::makeTxDbFromGFF(gtf_file, format = "gtf")
+} else {
+  txdb <- makeTxDbFromGFF(gtf_file, format = "gtf")
+}
+
+message("✔ TxDb loaded successfully")
+
+# === 2. Extract exons and introns ===
 exons_by_tx <- exonsBy(txdb, by = "tx")
 introns_by_tx <- intronsByTranscript(txdb, use.names = TRUE)
 
-# Flatten to a data frame
-introns_df <- as.data.frame(unlist(introns_by_tx))
+# Flatten GRangesList to GRanges, ensuring unique names
+introns_flat <- unlist(introns_by_tx)
+names(introns_flat) <- make.unique(names(introns_flat))
+introns_df <- as.data.frame(introns_flat, row.names = NULL)
+
+message("✔ Extracted and flattened introns (", nrow(introns_df), " entries)")
+
+# === 3. Clean up and annotate ===
 introns_df <- introns_df %>%
   dplyr::select(seqnames, start, end, strand, tx_id) %>%
-  mutate(intron_start = start,
-         intron_end = end,
-         chrom = as.character(seqnames),
-         strand = as.character(strand)) %>%
+  mutate(
+    intron_start = start,
+    intron_end = end,
+    chrom = as.character(seqnames),
+    strand = as.character(strand)
+  ) %>%
   select(chrom, intron_start, intron_end, strand, tx_id)
 
-# === 2. Map each transcript to its gene ===
+# === 4. Map transcripts to genes ===
 tx2gene <- select(txdb, keys(txdb, "TXID"), columns = c("TXID", "GENEID"), keytype = "TXID")
+
 introns_df <- left_join(introns_df, tx2gene, by = c("tx_id" = "TXID"))
 
-# === 3. Collapse to unique intron–gene pairs ===
+# === 5. Collapse to unique intron–gene pairs ===
 junction_to_gene <- introns_df %>%
   distinct(chrom, intron_start, intron_end, strand, GENEID) %>%
-  rename(gene_id = GENEID)
-
-# === 4. Create junction_id to match your merged table ===
-junction_to_gene <- junction_to_gene %>%
+  rename(gene_id = GENEID) %>%
   mutate(junction_id = paste(chrom, intron_start, intron_end, strand, sep = "_")) %>%
   select(junction_id, gene_id)
 
-# === 5. Save mapping ===
+# === 6. Write output ===
 write_tsv(junction_to_gene, "junction_to_gene.tsv")
 message("✅ Wrote junction_to_gene.tsv with ", nrow(junction_to_gene), " junctions.")
 
