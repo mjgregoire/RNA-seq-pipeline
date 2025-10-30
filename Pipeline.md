@@ -543,4 +543,142 @@ cd /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output
 
 # Run the R script
 Rscript /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/merge_junctions_and_compute_JPM.R
+
+```
+# 5) Normalize junctions to gene RPKM
+Junctions per million (JPM) = Junction read count / Gene RPKM
+RPKM = gene counts / gene length in kb x total mapped reads in millions
+
+This scales each junction by how expressed its parent gene is, letting you compare junction usage across samples or between known targets.
+
+## make junction to gene map
+make sure that rnaseq_tools environment is loaded, then install GenomicFeatures into R:
+```
+nano install_genomicfeatures.sh
+
+#!/bin/bash
+#SBATCH --job-name=install_genomicfeatures
+#SBATCH --mem=32G
+#SBATCH --time=04:00:00
+#SBATCH --output=install_genomicfeatures.out
+#SBATCH --error=install_genomicfeatures.err
+
+module load R/4.3.1  # or whatever R version your cluster uses
+
+Rscript - <<'EOF'
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("GenomicFeatures", ask = FALSE, update = FALSE)
+EOF
+
+sbatch install_genomicfeatures.sh
+```
+
+```
+nano make_junction_to_gene_map.R
+
+# make_junction_to_gene_map.R
+library(GenomicFeatures)
+library(dplyr)
+library(readr)
+
+# === Input files ===
+gtf_file <- "/gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf"
+junction_file <- "merged_junction_counts.tsv"
+
+# === 1. Load GTF as a TxDb ===
+txdb <- makeTxDbFromGFF(gtf_file, format = "gtf")
+
+# Extract exons and infer introns per transcript
+exons_by_tx <- exonsBy(txdb, by = "tx")
+introns_by_tx <- intronsByTranscript(txdb, use.names = TRUE)
+
+# Flatten to a data frame
+introns_df <- as.data.frame(unlist(introns_by_tx))
+introns_df <- introns_df %>%
+  dplyr::select(seqnames, start, end, strand, tx_id) %>%
+  mutate(intron_start = start,
+         intron_end = end,
+         chrom = as.character(seqnames),
+         strand = as.character(strand)) %>%
+  select(chrom, intron_start, intron_end, strand, tx_id)
+
+# === 2. Map each transcript to its gene ===
+tx2gene <- select(txdb, keys(txdb, "TXID"), columns = c("TXID", "GENEID"), keytype = "TXID")
+introns_df <- left_join(introns_df, tx2gene, by = c("tx_id" = "TXID"))
+
+# === 3. Collapse to unique intron–gene pairs ===
+junction_to_gene <- introns_df %>%
+  distinct(chrom, intron_start, intron_end, strand, GENEID) %>%
+  rename(gene_id = GENEID)
+
+# === 4. Create junction_id to match your merged table ===
+junction_to_gene <- junction_to_gene %>%
+  mutate(junction_id = paste(chrom, intron_start, intron_end, strand, sep = "_")) %>%
+  select(junction_id, gene_id)
+
+# === 5. Save mapping ===
+write_tsv(junction_to_gene, "junction_to_gene.tsv")
+message("✅ Wrote junction_to_gene.tsv with ", nrow(junction_to_gene), " junctions.")
+```
+## normalize
+```
+nano normalize_junctions_to_RPKM.R
+
+# normalize_junctions_to_RPKM.R
+library(dplyr)
+library(tidyr)
+library(readr)
+library(stringr)
+
+# === 1. Load data ===
+junction_counts <- read_tsv("merged_junction_counts.tsv")
+gene_counts <- read_tsv("gene_counts.txt", comment = "#")
+
+# === 2. Clean up gene_counts ===
+# featureCounts outputs extra columns before samples, so extract them
+gene_counts <- gene_counts %>%
+  select(Geneid, Length, matches("Aligned.sortedByCoord.out.bam$")) %>%
+  rename(gene_id = Geneid)
+
+# Remove path prefixes in column names
+colnames(gene_counts) <- gsub(".*/|_Aligned.sortedByCoord.out.bam", "", colnames(gene_counts))
+
+# === 3. Compute total mapped reads per sample ===
+total_counts <- colSums(gene_counts[ , -c(1,2)])
+
+# === 4. Compute RPKM per gene per sample ===
+rpkm <- gene_counts
+for (s in names(total_counts)) {
+  rpkm[[s]] <- (gene_counts[[s]] * 1e9) / (gene_counts$Length * total_counts[[s]])
+}
+
+# === 5. Load junction metadata (for gene mapping) ===
+# NOTE: STAR’s SJ.out.tab doesn’t directly list parent gene IDs.
+# You’ll need an annotation map (from the GTF) of intron coordinates → gene.
+# If you don’t have that yet, we can generate it with a small helper script later.
+
+# For now, let’s assume we have a mapping file called “junction_to_gene.tsv”
+# with columns: junction_id, gene_id
+junction_to_gene <- read_tsv("junction_to_gene.tsv")
+
+# === 6. Merge junctions with RPKM ===
+junction_norm <- junction_counts %>%
+  left_join(junction_to_gene, by = "junction_id") %>%
+  left_join(rpkm, by = "gene_id", suffix = c("_junction", "_gene"))
+
+# === 7. Compute normalized junction ratio ===
+samples <- intersect(
+  colnames(junction_counts)[-1],
+  colnames(rpkm)[-c(1,2)]
+)
+
+for (s in samples) {
+  junction_norm[[paste0(s, "_JPM")]] <- junction_norm[[s]] / (junction_norm[[paste0(s, "_gene")]] + 1e-6)
+}
+
+# === 8. Save output ===
+write_tsv(junction_norm, "junctions_normalized_to_RPKM.tsv")
+
+message("✅ Normalized junction file written to junctions_normalized_to_RPKM.tsv")
 ```
