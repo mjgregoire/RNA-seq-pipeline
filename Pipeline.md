@@ -637,7 +637,7 @@ introns_df <- introns_df %>%
   ) %>%
   select(chrom, intron_start, intron_end, strand, tx_id)
 
-# === 4. Map transcripts to genes ===
+# === 4. Map transcripts to genes (robust version) ===
 tx <- transcripts(txdb, columns = c("tx_id", "gene_id"))
 tx2gene <- as.data.frame(mcols(tx)) %>%
   select(tx_id, gene_id) %>%
@@ -648,8 +648,7 @@ introns_df <- left_join(introns_df, tx2gene, by = "tx_id")
 
 # === 5. Collapse to unique intron–gene pairs ===
 junction_to_gene <- introns_df %>%
-  distinct(chrom, intron_start, intron_end, strand, GENEID) %>%
-  rename(gene_id = GENEID) %>%
+  distinct(chrom, intron_start, intron_end, strand, gene_id) %>%
   mutate(junction_id = paste(chrom, intron_start, intron_end, strand, sep = "_")) %>%
   select(junction_id, gene_id)
 
