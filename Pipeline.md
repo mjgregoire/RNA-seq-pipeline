@@ -476,6 +476,23 @@ Overall there are: ~50.8M Assigned / (50.8 + 5.5 + 3.5 + 5.7 = 65.5M total)
 → ≈ 77–78% of reads assigned
 Good range for high-quality RNA-seq.
 
+but with head gene_counts.txt you'll see there are no headers, lets fix that for easy mapping later: 
+```
+awk 'NR==1 {
+  printf $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6; 
+  for (i=7; i<=NF; i++) {
+    n=split($i,a,"/"); 
+    gsub("_Aligned.sortedByCoord.out.bam","",a[n]); 
+    printf "\t"a[n]
+  }
+  print ""
+  next
+}1' gene_counts.txt > gene_counts_clean.txt
+
+awk 'NR==2 || NR>2 {print}' gene_counts_clean.txt | \
+sed 's/\/.*\///g; s/_Aligned.sortedByCoord.out.bam//g' > gene_counts_final.txt
+```
+
 # 4) merege junction counts
 ```
 nano merge_junctions_and_compute_JPM.R
@@ -676,67 +693,6 @@ module load R-bundle-Bioconductor/3.19-foss-2022b-R-4.4.1
 
 Rscript make_junction_to_gene_map.R --threads=8
 ```
-## normalize
-```
-nano normalize_junctions_to_RPKM.R
-
-# normalize_junctions_to_RPKM.R
-library(dplyr)
-library(tidyr)
-library(readr)
-library(stringr)
-
-# === 1. Load data ===
-junction_counts <- read_tsv("merged_junction_counts.tsv")
-gene_counts <- read_tsv("gene_counts.txt", comment = "#")
-
-# === 2. Clean up gene_counts ===
-# featureCounts outputs extra columns before samples, so extract them
-gene_counts <- gene_counts %>%
-  select(Geneid, Length, matches("Aligned.sortedByCoord.out.bam$")) %>%
-  rename(gene_id = Geneid)
-
-# Remove path prefixes in column names
-colnames(gene_counts) <- gsub(".*/|_Aligned.sortedByCoord.out.bam", "", colnames(gene_counts))
-
-# === 3. Compute total mapped reads per sample ===
-total_counts <- colSums(gene_counts[ , -c(1,2)])
-
-# === 4. Compute RPKM per gene per sample ===
-rpkm <- gene_counts
-for (s in names(total_counts)) {
-  rpkm[[s]] <- (gene_counts[[s]] * 1e9) / (gene_counts$Length * total_counts[[s]])
-}
-
-# === 5. Load junction metadata (for gene mapping) ===
-# NOTE: STAR’s SJ.out.tab doesn’t directly list parent gene IDs.
-# You’ll need an annotation map (from the GTF) of intron coordinates → gene.
-# If you don’t have that yet, we can generate it with a small helper script later.
-
-# For now, let’s assume we have a mapping file called “junction_to_gene.tsv”
-# with columns: junction_id, gene_id
-junction_to_gene <- read_tsv("junction_to_gene.tsv")
-
-# === 6. Merge junctions with RPKM ===
-junction_norm <- junction_counts %>%
-  left_join(junction_to_gene, by = "junction_id") %>%
-  left_join(rpkm, by = "gene_id", suffix = c("_junction", "_gene"))
-
-# === 7. Compute normalized junction ratio ===
-samples <- intersect(
-  colnames(junction_counts)[-1],
-  colnames(rpkm)[-c(1,2)]
-)
-
-for (s in samples) {
-  junction_norm[[paste0(s, "_JPM")]] <- junction_norm[[s]] / (junction_norm[[paste0(s, "_gene")]] + 1e-6)
-}
-
-# === 8. Save output ===
-write_tsv(junction_norm, "junctions_normalized_to_RPKM.tsv")
-
-message("✅ Normalized junction file written to junctions_normalized_to_RPKM.tsv")
-```
 
 that didn't really work only 1 gene found, so now:
 
@@ -923,5 +879,266 @@ awk -F'\t' '$3=="noncanonical"{print $1"\t"$2}' junction_to_gene.tsv | sort -u >
 
 the annoated file actually didn't keep any of the noncanonical junctions!! we need to fix that!:
 ```
+# create LOJ annotated file
 bedtools intersect -a junctions_flagged.bed -b genes.bed -wa -wb -loj > junctions_annotated_flagged_loj.bed
+
+# make junction->gene->flag table (gene = '.' if no overlap)
+awk -F'\t' '{
+  junc=$4; flag=$7; gene=$11;
+  if (gene=="" || gene==".") gene=".";
+  print junc"\t"gene"\t"flag;
+}' junctions_annotated_flagged_loj.bed | sort -u > junction_to_gene.tsv
+
+# summary: counts overall, canonical vs noncanonical, and non-overlaps
+echo "Overall counts (ignoring flag):"
+cut -f1,2 junction_to_gene.tsv | sort -u | \
+  awk -F'\t' '{cnt[$1]++} END{single=multi=0; for(i in cnt){if(cnt[i]==1) single++; else multi++} print "unique:",single; print "multi:",multi; print "total:",single+multi}'
+
+echo; echo "Per-flag non-overlap counts:"
+awk -F'\t' '$2=="." {counts[$3]++} END{for(f in counts) print f,counts[f]}' junction_to_gene.tsv
 ```
+Category
+Count
+Meaning
+unique
+743,393
+Junctions mapping to exactly one gene
+multi
+295,754
+Junctions overlapping multiple genes
+total
+1,039,147
+Total distinct junctions detected (unique + multi)
+canonical (no overlap)
+44,948
+Canonical junctions not overlapping any annotated gene (likely due to incomplete annotation or alternate contigs)
+noncanonical (no overlap)
+3,158
+Noncanonical junctions not overlapping any annotated gene (true novel/cryptic events)
+
+1.	Canonical no-overlaps (44,948)
+These are junctions flagged “canonical” by STAR (GT–AG etc.) but that don’t overlap any gene in your genes.bed.
+→ Likely belong to unplaced contigs, alternative haplotypes, or unannotated gene models.
+→ They’re not necessarily biologically strange — more likely an annotation gap.
+2.	Noncanonical no-overlaps (3,158)
+These are the interesting ones for your cryptic splicing analysis!
+→ They have noncanonical motifs and don’t overlap any known gene.
+→ They could represent true novel junctions — potential cryptic or mis-spliced events.
+→ Worth investigating which samples they appear in, whether they’re recurrent, and what the local sequence looks like.
+3.	Everything else
+The rest (roughly 991k) are junctions that successfully overlap annotated genes — those will cover all normal exon–exon junctions and canonical splicing events.
+
+
+CREATE SUBSET FOR CRYPTIC ANALYSIS
+`awk -F'\t' '$3=="noncanonical" && $2=="."' junction_to_gene.tsv > cryptic_junctions.tsv`
+look at genomic coordinates
+```
+head -n 5 cryptic_junctions.tsv
+grep -F $(cut -f1 -d$'\t' cryptic_junctions.tsv | head -n 1) junctions_flagged.bed
+```
+Later, you can feed those junction coordinates into bedtools getfasta to extract sequences for motif or splice site scoring.
+
+now we can normalize to RPKM!
+
+## normalize
+these files need to be in the same folder: 
+merged_junction_counts.tsv
+gene_counts.txt
+junction_to_gene.tsv
+```
+nano normalize_junctions_to_RPKM.R
+# === normalize_junctions_to_RPKM.R ===
+library(dplyr)
+library(tidyr)
+library(readr)
+library(stringr)
+
+# === 1. Load data ===
+message("📂 Loading input files...")
+junction_counts <- read_tsv("merged_junction_counts.tsv")
+gene_counts <- read_tsv("gene_counts.txt", comment = "#")
+junction_to_gene <- read_tsv("junction_to_gene.tsv", col_names = c("junction_id", "gene_id"))
+
+# === 2. Clean up gene_counts ===
+message("🧹 Cleaning gene count column names...")
+gene_counts <- gene_counts %>%
+  rename(gene_id = Geneid) %>%
+  select(gene_id, Length, matches("Aligned.sortedByCoord.out.bam"))
+
+# 🪄 Clean up column names to match SRR IDs in junction file
+colnames(gene_counts) <- gsub(".*/|_Aligned.sortedByCoord.out.bam", "", colnames(gene_counts))
+
+# === 3. Compute total mapped reads per sample ===
+message("📊 Computing total mapped reads per sample...")
+
+# Identify all SRR-like sample columns
+srr_cols <- grep("^SRR\\d+$", colnames(gene_counts), value = TRUE)
+
+if (length(srr_cols) == 0) {
+  stop("❌ No SRR sample columns found in gene_counts! Check your column names: ",
+       paste(colnames(gene_counts), collapse = ", "))
+}
+
+# Ensure the sample columns are numeric
+for (c in srr_cols) {
+  if (!is.numeric(gene_counts[[c]])) {
+    gene_counts[[c]] <- as.numeric(gene_counts[[c]])
+  }
+}
+
+# Compute total mapped reads per sample
+gene_counts_numeric <- gene_counts %>% select(all_of(srr_cols))
+total_counts <- colSums(gene_counts_numeric, na.rm = TRUE)
+
+# === 4. Compute RPKM per gene per sample (create *_gene columns) ===
+message("⚙️ Computing gene RPKM columns...")
+rpkm <- gene_counts %>% select(gene_id, Length)
+
+for (s in names(total_counts)) {
+  new_col <- paste0(s, "_gene")
+  rpkm[[new_col]] <- (gene_counts[[s]] * 1e9) / (gene_counts$Length * total_counts[[s]])
+}
+
+# === 5. Load canonical/noncanonical flag data ===
+message("🏷️ Adding canonical/noncanonical flags (if available)...")
+
+if (file.exists("junctions_flagged.bed")) {
+  junction_flags <- read_tsv(
+    "junctions_flagged.bed",
+    col_names = c("chrom", "start", "end", "junction_id", "score", "strand", "flag"),
+    col_types = "ciicccc"
+  ) %>% select(junction_id, flag)
+} else {
+  message("⚠️ No 'junctions_flagged.bed' found — proceeding without flags.")
+  junction_flags <- tibble(junction_id = junction_counts$junction_id, flag = "unknown")
+}
+
+# === 6. Clean and standardize IDs + merge ===
+message("🧹 Cleaning and standardizing IDs before merging...")
+
+# Strip version numbers from Ensembl gene IDs
+junction_to_gene <- junction_to_gene %>%
+  mutate(gene_id = str_replace(gene_id, "\\.\\d+$", ""))
+
+gene_counts <- gene_counts %>%
+  mutate(gene_id = str_replace(gene_id, "\\.\\d+$", ""))
+
+# Merge everything together
+message("🔗 Merging junctions, gene IDs, RPKMs, and flags...")
+
+junction_norm <- junction_counts %>%
+  left_join(junction_to_gene, by = "junction_id") %>%
+  left_join(rpkm, by = "gene_id", suffix = c("_junction", "_gene")) %>%
+  left_join(junction_flags, by = "junction_id")
+
+# Check merge success
+mapped <- sum(!is.na(junction_norm$gene_id))
+total <- nrow(junction_norm)
+message(sprintf("\n🔍 Junctions mapped to genes: %d / %d (%.2f%%)",
+                mapped, total, 100 * mapped / total))
+
+# === 7. Compute normalized junction ratio (Junctions Per Million RPKM) ===
+message("⚙️ Computing normalized junction ratios...")
+
+# Detect sample IDs from junction_counts (excluding junction_id)
+samples <- setdiff(colnames(junction_counts), "junction_id")
+
+# Figure out which columns in junction_norm correspond to gene RPKMs
+rpkm_cols <- grep("_gene$", colnames(junction_norm), value = TRUE)
+
+# ✅ Diagnostic check
+message("🧪 Checking column name alignment...")
+message("Junction samples: ", paste(samples, collapse = ", "))
+message("RPKM columns: ", paste(rpkm_cols, collapse = ", "))
+
+for (s in samples) {
+  # Find matching junction and gene columns
+  junction_col <- s
+  gene_col <- rpkm_cols[grepl(s, rpkm_cols)]
+
+  if (length(gene_col) == 1 && junction_col %in% colnames(junction_norm)) {
+    norm_col <- paste0(s, "_JPM")
+    junction_norm[[norm_col]] <- junction_norm[[junction_col]] / (junction_norm[[gene_col]] + 1e-6)
+  } else {
+    message(sprintf("⚠️ Skipping sample %s (missing columns)", s))
+  }
+}
+
+# === 8. Quick summary ===
+message("\n📈 Summary of merged data:")
+summary_df <- junction_norm %>%
+  count(flag) %>%
+  rename(Junctions = n)
+print(summary_df)
+
+if ("gene_id" %in% colnames(junction_norm)) {
+  mapped <- sum(!is.na(junction_norm$gene_id))
+  total <- nrow(junction_norm)
+  message(sprintf("\n🔍 Junctions mapped to genes: %d / %d (%.2f%%)",
+                  mapped, total, 100 * mapped / total))
+}
+
+# === 9. Save output ===
+write_tsv(junction_norm, "junctions_normalized_to_RPKM.tsv")
+message("\n✅ Normalized junction file written to 'junctions_normalized_to_RPKM.tsv'")
+
+nano run_normalize_junctions_to_RPKM.sh
+
+#!/bin/bash
+#SBATCH --job-name=jxn_norm
+#SBATCH --output=jxn_norm_%j.out
+#SBATCH --error=jxn_norm_%j.err
+#SBATCH --time=04:00:00
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
+#SBATCH --mail-type=ALL
+
+# === Environment setup ===
+module --force purge
+module load R-bundle-Bioconductor/3.19-foss-2022b-R-4.4.1
+
+echo "======================================="
+echo " Job: Junction normalization to RPKM"
+echo " Started: $(date)"
+echo " Node: $(hostname)"
+echo "======================================="
+
+# === Check input files ===
+echo "Checking input files..."
+for f in merged_junction_counts.tsv gene_counts.txt junction_to_gene.tsv junctions_flagged.bed; do
+    if [ ! -f "$f" ]; then
+        echo "❌ ERROR: Missing required file: $f"
+        echo "Aborting job."
+        exit 1
+    fi
+done
+echo "✅ All input files present."
+
+# === Run the R script ===
+echo "Running normalization script..."
+Rscript normalize_junctions_to_RPKM.R
+
+# === Completion message ===
+status=$?
+if [ $status -eq 0 ]; then
+    echo "✅ Normalization completed successfully!"
+else
+    echo "❌ R script exited with an error (exit code $status)"
+fi
+
+echo "Finished: $(date)"
+echo "======================================="
+```
+junction_to_gene <- read.delim("junction_to_gene.tsv", header=TRUE)
+counts <- read.delim("gene_counts.txt", header=TRUE, comment.char="#")
+
+# Check name overlap
+cat("junction_to_gene IDs:", nrow(junction_to_gene), "\n")
+cat("counts IDs:", nrow(counts), "\n")
+
+# Check format
+head(junction_to_gene$junction_id)
+head(counts$Geneid)
+
+# Check actual overlap
+sum(counts$Geneid %in% junction_to_gene$junction_id)
