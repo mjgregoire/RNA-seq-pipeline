@@ -776,6 +776,7 @@ awk -F'\t' 'NR>1 {
 
 Intersect junctions with gene spans (bedtools)
 `bedtools intersect -a junctions.bed -b genes.bed > junctions_annotated.bed`
+`bedtools intersect -a junctions.bed -b genes.bed -wa -wb > junctions_intersect_genes.bed`
 
 if you get error: ***** WARNING: File *.bed has inconsistent naming convention for record:
 it means that there are non conventional reads.
@@ -789,3 +790,138 @@ You want to capture every potential novel junction.
 	•	Whether the contig appears in your reference GTF or canonical chromosomes.
 
 ➡ Step 3: Focus your biological interpretation on canonical chromosomes, but check non-canonical hits for possible artifacts or interesting exceptions.
+
+
+So we will flag the canonical chromosomes in the junctions file and re-run bed tools
+
+Add a flag column to junctions.bed:
+```
+awk 'BEGIN{
+    OFS="\t";
+}
+{
+    # canonical chr: chr1-22, chrX, chrY, chrM, or bare 1-22,X,Y,M
+    if ($1 ~ /^(chr)?([0-9]{1,2}|X|Y|M)$/)
+        flag="canonical";
+    else
+        flag="noncanonical";
+    print $0, flag;
+}' junctions.bed > junctions_flagged.bed
+
+awk '$7=="canonical"' junctions_flagged.bed > junctions_canonical.bed
+awk '$7=="noncanonical"' junctions_flagged.bed > junctions_noncanonical.bed
+
+bedtools intersect \
+    -a junctions_flagged.bed \
+    -b genes.bed \
+    -wa -wb > junctions_annotated_flagged.bed
+```
+`awk -F'\t' '{print $4"\t"$10}' junctions_intersect_genes.bed | sort -u > junction_to_gene.tsv`
+or using annotated file (DO THIS): 
+`awk -F'\t' '{
+  junc_id = $4;
+  flag = $7;
+  gene = $11;         # adjust if your genes.bed stores the gene id/name in a different column
+  if (gene == "") gene = ".";
+  print junc_id"\t"gene"\t"flag;
+}' junctions_annotated_flagged.bed | sort -u > junction_to_gene.tsv`
+
+summarize how many genes each junction maps to:
+```
+awk '{count[$1]++} END {
+  multi=0; single=0;
+  for (junc in count) {
+    if (count[junc]>1) multi++;
+    else single++;
+  }
+  print "Unique junctions mapping to one gene:", single;
+  print "Junctions mapping to multiple genes:", multi;
+  print "Total junctions:", single+multi;
+}' junction_to_gene.tsv
+```
+i got: Unique junctions mapping to one gene: 695287
+Junctions mapping to multiple genes: 295754
+Total junctions: 991041
+list mutimappers:
+`awk '{print $1}' junction_to_gene.tsv | sort | uniq -d > multi_gene_junctions.txt`
+`grep -Ff multi_gene_junctions.txt junction_to_gene.tsv | head`
+
+OR USING THE ANNOTATED FILE:
+```
+# Count unique vs multi-gene junctions, ignoring canonical flag
+cut -f1,2 junction_to_gene.tsv | sort -u | \
+awk -F'\t' '{
+  count[$1]++
+}
+END {
+  single=multi=0
+  for (j in count) {
+    if (count[j]>1) multi++; else single++;
+  }
+  total=single+multi
+  print "=== Overall (ignoring flag) ==="
+  print "Unique junctions mapping to 1 gene:", single
+  print "Junctions mapping to multiple genes:", multi
+  print "Total junctions:", total
+}'
+
+=== Overall (ignoring flag) ===
+Unique junctions mapping to 1 gene: 695287
+Junctions mapping to multiple genes: 295754
+Total junctions: 991041
+
+# Count unique vs multi-gene junctions separately for canonical/noncanonical
+awk -F'\t' '{
+  junction=$1; gene=$2; flag=$3;
+  key=flag"\t"junction;
+  count[key]++
+}
+END {
+  uniq["canonical"]=uniq["noncanonical"]=0
+  multi["canonical"]=multi["noncanonical"]=0
+  total["canonical"]=total["noncanonical"]=0
+  for (k in count) {
+    split(k,a,"\t"); flag=a[1];
+    total[flag]++;
+    if (count[k]>1) multi[flag]++; else uniq[flag]++;
+  }
+  print "=== Per-flag summary ==="
+  for (f in total)
+    print f,": total=",total[f],", unique=",uniq[f],", multi-gene=",multi[f]
+}' junction_to_gene.tsv
+
+=== Per-flag summary ===
+canonical : total= 991041 , unique= 695287 , multi-gene= 295754
+noncanonical : total= 0 , unique= 0 , multi-gene= 0
+
+
+# Create helper file grouping gene lists by junction and flag
+awk -F'\t' '{print $1"\t"$3"\t"$2}' junction_to_gene.tsv | sort | \
+  awk -F'\t' '{
+    j=$1; flag=$2; gene=$3;
+    key=j"\t"flag;
+    if (seen[key,gene] != 1) { seen[key,gene]=1; genes[key]=genes[key]?genes[key]","gene:gene; cnt[key]++ }
+  }
+  END {
+    PROCINFO["sorted_in"]="@ind_str_asc";
+    for (k in genes) {
+      split(k,a,"\t");
+      junc=a[1]; flag=a[2];
+      c=cnt[k];
+      if (c==1) uniq[flag]++; else multi[flag]++;
+      total[flag]++;
+    }
+    for (f in total) {
+      print f": total junctions="total[f]"; unique="uniq[f]"+0"; multi="multi[f]"+0
+    }
+  }'
+
+
+awk -F'\t' '$3=="canonical"{print $1"\t"$2}' junction_to_gene.tsv | sort -u > junction_to_gene.canonical.tsv
+awk -F'\t' '$3=="noncanonical"{print $1"\t"$2}' junction_to_gene.tsv | sort -u > junction_to_gene.noncanonical.tsv
+```
+
+the annoated file actually didn't keep any of the noncanonical junctions!! we need to fix that!:
+```
+bedtools intersect -a junctions_flagged.bed -b genes.bed -wa -wb -loj > junctions_annotated_flagged_loj.bed
+```
