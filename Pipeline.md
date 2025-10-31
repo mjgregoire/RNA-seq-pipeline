@@ -737,3 +737,55 @@ write_tsv(junction_norm, "junctions_normalized_to_RPKM.tsv")
 
 message("✅ Normalized junction file written to junctions_normalized_to_RPKM.tsv")
 ```
+
+that didn't really work only 1 gene found, so now:
+
+Make a gene-span BED from the GTF
+```
+cd /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output
+
+# produce genes.bed (0-based start)
+awk '$3=="gene" {
+  # remove quotes
+  gsub(/"/,"",$0);
+  split($0,f,"\t");
+  # find gene_id in attributes
+  match($0, /gene_id [^;]+/);
+  gid=substr($0, RSTART+8, RLENGTH-8);
+  # print chrom, start-1, end, gene_id, score(0), strand
+  print f[1]"\t"($4-1)"\t"$5"\t"gid"\t0\t"f[7]
+}' /gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf \
+  > genes.bed
+
+head genes.bed
+wc -l genes.bed
+```
+Make a junctions BED from your merged junction table
+```
+awk -F'\t' 'NR>1 {
+  split($1, p, "_");
+  chrom=p[1];
+  start=p[2];
+  end=p[3];
+  strand=p[4];
+  # BED format: chrom, start-1, end, junction_id, 0, strand
+  print chrom"\t"(start-1)"\t"end"\t"$1"\t0\t"strand
+}' merged_junction_counts.tsv > junctions.bed
+
+```
+
+Intersect junctions with gene spans (bedtools)
+`bedtools intersect -a junctions.bed -b genes.bed > junctions_annotated.bed`
+
+if you get error: ***** WARNING: File *.bed has inconsistent naming convention for record:
+it means that there are non conventional reads.
+
+➡ Step 1: Keep all contigs for the initial discovery phase.
+You want to capture every potential novel junction.
+
+➡ Step 2: After detection, filter or flag contigs based on:
+	•	Read count or junction support (e.g., ≥3 uniquely mapped reads).
+	•	Mapping quality (STAR’s NH or MAPQ tags).
+	•	Whether the contig appears in your reference GTF or canonical chromosomes.
+
+➡ Step 3: Focus your biological interpretation on canonical chromosomes, but check non-canonical hits for possible artifacts or interesting exceptions.
