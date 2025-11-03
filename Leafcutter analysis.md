@@ -9,38 +9,40 @@ All should be under rnaseq_tools environment
 #SBATCH --job-name=leafcutter_juncs
 #SBATCH --output=leafcutter_juncs_%j.out
 #SBATCH --error=leafcutter_juncs_%j.err
-#SBATCH --mail-type-=ALL
+#SBATCH --mail-type=ALL
 #SBATCH --time=06:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 
-# === 1. Load dependencies ===
+# === 1. Load Conda properly ===
 module load miniconda
+source $(conda info --base)/etc/profile.d/conda.sh
 conda activate rnaseq_tools
 
 # === 2. Define paths ===
-BAM_DIR="/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output"          # folder with your .bam files
-OUT_DIR="/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/leafcutter_jxns"    # where junction files will go
-SCRIPT_DIR="/gpfs/gibbs/pi/guo/mg2684/tools/leafcutter/scripts"   # location of LeafCutter scripts
+BAM_DIR="/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output"
+OUT_DIR="/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_jxns"
+SCRIPT_DIR="/gpfs/gibbs/pi/guo/mg2684/tools/leafcutter/scripts"
 
 # === 3. Run junction extraction ===
 mkdir -p $OUT_DIR
 
 for bam in ${BAM_DIR}/*.sortedByCoord.out.bam; do
     sample=$(basename $bam .sortedByCoord.out.bam)
-    echo "Processing ${sample}..."
-    samtools index $bam  # makes .bai if missing
+    
+    # Skip empty or corrupt BAMs
+    if [ ! -s "$bam" ]; then
+        echo "Skipping empty BAM: $bam"
+        continue
+    fi
 
-    # run the leafcutter script to extract junctions
-    python ${SCRIPT_DIR}/leafcutter/scripts/leafcutter/clustering/extract_juncs.py \
-        -a ${sample} \
-        -o ${OUT_DIR}/${sample}.junc \
-        $bam
+    echo "Processing ${sample}..."
+    samtools index $bam
+
+    # Run the correct LeafCutter extraction script
+    python ${SCRIPT_DIR}/bam2junc.sh $bam ${OUT_DIR}/${sample}
 done
 ```
-Notes:
-	•	If your BAMs are already coordinate-sorted and indexed, you can skip the sort step. The script checks and sorts into *.sorted.bam.
-	•	regtools options used above are examples; -a (anchor length), -m/-M (min/max intron length). You may tune these based on library prep.
 
 2. Combine per-sample junctions (one combined file)
 ```
