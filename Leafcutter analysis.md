@@ -5,32 +5,37 @@ All should be under rnaseq_tools environment
 
 1. Make per-junction sample files from BAM (shell)
 ```
-# Set these
-BAM_DIR="/gpfs/gibbs/pi/guo/mg2684/bams"          # directory with your BAMs
-OUT_DIR="/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_input_bam"
-mkdir -p "$OUT_DIR"
+#!/bin/bash
+#SBATCH --job-name=leafcutter_juncs
+#SBATCH --output=leafcutter_juncs_%j.out
+#SBATCH --error=leafcutter_juncs_%j.err
+#SBATCH --mail-type-=ALL
+#SBATCH --time=06:00:00
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=32G
 
-# optional: list samples (adjust pattern)
-cd "$BAM_DIR"
-SAMPLES=(SRR18907541 SRR18907548 SRR18907557 SRR18907558 SRR18907555 SRR18907556 SRR18907552 SRR18907540 SRR18907547 SRR18907544 SRR18907543 SRR18907550 SRR18907549 SRR18907551 SRR18907561 SRR18907562 SRR18907563 SRR18907554 SRR18907545 SRR18907560 SRR18907542 SRR18907546 SRR18907559 SRR18907553)
+# === 1. Load dependencies ===
+module load miniconda
+conda activate rnaseq_tools
 
-# Loop: sort/index if needed, then regtools
-for s in "${SAMPLES[@]}"; do
-  bam="${BAM_DIR}/${s}.bam"
-  sorted="${BAM_DIR}/${s}.sorted.bam"
-  if [ ! -f "$sorted" ]; then
-    echo "Sorting $bam → $sorted"
-    samtools sort -@ 2 -o "$sorted" "$bam"    # adjust -@ cores as needed
-    samtools index "$sorted"
-  fi
+# === 2. Define paths ===
+BAM_DIR="/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output"          # folder with your .bam files
+OUT_DIR="/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/leafcutter_jxns"    # where junction files will go
+SCRIPT_DIR="/gpfs/gibbs/pi/guo/mg2684/tools/leafcutter/scripts"   # location of LeafCutter scripts
 
-  out_junc="${OUT_DIR}/${s}.junc"
-  echo "Extracting junctions for $s -> $out_junc"
-  # regtools outputs: chr   start   end   strand   annot?   count  ... 
-  # adjust flags if necessary; we keep only chr,start,end,strand,count
-  regtools junctions extract -a 8 -m 50 -M 500000 "$sorted" \
-    | awk 'BEGIN{OFS="\t"} {print $1,$2,$3,$4,$7}' > "$out_junc"
-  # Explanation: -a 8 filter anchors >=8, -m/-M min/max intron size ; tune as needed
+# === 3. Run junction extraction ===
+mkdir -p $OUT_DIR
+
+for bam in ${BAM_DIR}/*.sortedByCoord.out.bam; do
+    sample=$(basename $bam .sortedByCoord.out.bam)
+    echo "Processing ${sample}..."
+    samtools index $bam  # makes .bai if missing
+
+    # run the leafcutter script to extract junctions
+    python ${SCRIPT_DIR}/leafcutter/scripts/leafcutter/clustering/extract_juncs.py \
+        -a ${sample} \
+        -o ${OUT_DIR}/${sample}.junc \
+        $bam
 done
 ```
 Notes:
