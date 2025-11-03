@@ -5,6 +5,10 @@ All should be under rnaseq_tools environment
 
 1. Make per-junction sample files from BAM (shell)
 ```
+#first add this line to the bam2junc.sh file in the leafcutter/scripts directory
+leafCutterDir="/gpfs/gibbs/pi/guo/mg2684/tools/leafcutter"
+```
+```
 #!/bin/bash
 #SBATCH --job-name=leafcutter_juncs
 #SBATCH --output=leafcutter_juncs_%j.out
