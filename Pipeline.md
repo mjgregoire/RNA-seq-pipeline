@@ -896,6 +896,11 @@ cut -f1,2 junction_to_gene.tsv | sort -u | \
 
 echo; echo "Per-flag non-overlap counts:"
 awk -F'\t' '$2=="." {counts[$3]++} END{for(f in counts) print f,counts[f]}' junction_to_gene.tsv
+
+awk -F'\t' '{
+  gsub(/^chr/, "", $1);
+  print $0;
+}' junction_to_gene.tsv > junction_to_gene_noprefix.tsv
 ```
 Category
 Count
@@ -956,8 +961,8 @@ library(stringr)
 # === 1. Load data ===
 message("📂 Loading input files...")
 junction_counts <- read_tsv("merged_junction_counts.tsv")
-gene_counts <- read_tsv("gene_counts.txt", comment = "#")
-junction_to_gene <- read_tsv("junction_to_gene.tsv", col_names = c("junction_id", "gene_id"))
+gene_counts <- read_tsv("gene_counts_clean.txt", comment = "#")
+junction_to_gene <- read_tsv("junction_to_gene_noprefix.tsv", col_names = c("junction_id", "gene_id"))
 
 # === 2. Clean up gene_counts ===
 message("🧹 Cleaning gene count column names...")
@@ -971,29 +976,24 @@ colnames(gene_counts) <- gsub(".*/|_Aligned.sortedByCoord.out.bam", "", colnames
 # === 3. Compute total mapped reads per sample ===
 message("📊 Computing total mapped reads per sample...")
 
-# Identify all SRR-like sample columns
 srr_cols <- grep("^SRR\\d+$", colnames(gene_counts), value = TRUE)
-
 if (length(srr_cols) == 0) {
   stop("❌ No SRR sample columns found in gene_counts! Check your column names: ",
        paste(colnames(gene_counts), collapse = ", "))
 }
 
-# Ensure the sample columns are numeric
+# Ensure numeric
 for (c in srr_cols) {
   if (!is.numeric(gene_counts[[c]])) {
     gene_counts[[c]] <- as.numeric(gene_counts[[c]])
   }
 }
 
-# Compute total mapped reads per sample
-gene_counts_numeric <- gene_counts %>% select(all_of(srr_cols))
-total_counts <- colSums(gene_counts_numeric, na.rm = TRUE)
+total_counts <- colSums(gene_counts %>% select(all_of(srr_cols)), na.rm = TRUE)
 
-# === 4. Compute RPKM per gene per sample (create *_gene columns) ===
+# === 4. Compute RPKM per gene per sample ===
 message("⚙️ Computing gene RPKM columns...")
 rpkm <- gene_counts %>% select(gene_id, Length)
-
 for (s in names(total_counts)) {
   new_col <- paste0(s, "_gene")
   rpkm[[new_col]] <- (gene_counts[[s]] * 1e9) / (gene_counts$Length * total_counts[[s]])
@@ -1001,7 +1001,6 @@ for (s in names(total_counts)) {
 
 # === 5. Load canonical/noncanonical flag data ===
 message("🏷️ Adding canonical/noncanonical flags (if available)...")
-
 if (file.exists("junctions_flagged.bed")) {
   junction_flags <- read_tsv(
     "junctions_flagged.bed",
@@ -1016,46 +1015,43 @@ if (file.exists("junctions_flagged.bed")) {
 # === 6. Clean and standardize IDs + merge ===
 message("🧹 Cleaning and standardizing IDs before merging...")
 
-# Strip version numbers from Ensembl gene IDs
 junction_to_gene <- junction_to_gene %>%
-  mutate(gene_id = str_replace(gene_id, "\\.\\d+$", ""))
+  mutate(
+    gene_id = str_replace(gene_id, "\\.\\d+$", ""),         # remove version numbers
+  )
 
 gene_counts <- gene_counts %>%
   mutate(gene_id = str_replace(gene_id, "\\.\\d+$", ""))
 
-# Merge everything together
+# === NEW: left join with keep_all so unmapped junctions stay ===
 message("🔗 Merging junctions, gene IDs, RPKMs, and flags...")
-
 junction_norm <- junction_counts %>%
   left_join(junction_to_gene, by = "junction_id") %>%
   left_join(rpkm, by = "gene_id", suffix = c("_junction", "_gene")) %>%
   left_join(junction_flags, by = "junction_id")
 
-# Check merge success
-mapped <- sum(!is.na(junction_norm$gene_id))
+# === 7. Handle unmapped junctions safely ===
+junction_norm <- junction_norm %>%
+  mutate(flag = if_else(is.na(flag), "unmapped", flag),
+         gene_id = if_else(is.na(gene_id), "unmapped", gene_id))
+
+mapped <- sum(junction_norm$gene_id != "unmapped")
 total <- nrow(junction_norm)
 message(sprintf("\n🔍 Junctions mapped to genes: %d / %d (%.2f%%)",
                 mapped, total, 100 * mapped / total))
 
-# === 7. Compute normalized junction ratio (Junctions Per Million RPKM) ===
+# === 8. Compute normalized junction ratios ===
 message("⚙️ Computing normalized junction ratios...")
-
-# Detect sample IDs from junction_counts (excluding junction_id)
 samples <- setdiff(colnames(junction_counts), "junction_id")
-
-# Figure out which columns in junction_norm correspond to gene RPKMs
 rpkm_cols <- grep("_gene$", colnames(junction_norm), value = TRUE)
 
-# ✅ Diagnostic check
 message("🧪 Checking column name alignment...")
 message("Junction samples: ", paste(samples, collapse = ", "))
 message("RPKM columns: ", paste(rpkm_cols, collapse = ", "))
 
 for (s in samples) {
-  # Find matching junction and gene columns
   junction_col <- s
   gene_col <- rpkm_cols[grepl(s, rpkm_cols)]
-
   if (length(gene_col) == 1 && junction_col %in% colnames(junction_norm)) {
     norm_col <- paste0(s, "_JPM")
     junction_norm[[norm_col]] <- junction_norm[[junction_col]] / (junction_norm[[gene_col]] + 1e-6)
@@ -1064,21 +1060,14 @@ for (s in samples) {
   }
 }
 
-# === 8. Quick summary ===
+# === 9. Summary ===
 message("\n📈 Summary of merged data:")
 summary_df <- junction_norm %>%
   count(flag) %>%
   rename(Junctions = n)
 print(summary_df)
 
-if ("gene_id" %in% colnames(junction_norm)) {
-  mapped <- sum(!is.na(junction_norm$gene_id))
-  total <- nrow(junction_norm)
-  message(sprintf("\n🔍 Junctions mapped to genes: %d / %d (%.2f%%)",
-                  mapped, total, 100 * mapped / total))
-}
-
-# === 9. Save output ===
+# === 10. Save output ===
 write_tsv(junction_norm, "junctions_normalized_to_RPKM.tsv")
 message("\n✅ Normalized junction file written to 'junctions_normalized_to_RPKM.tsv'")
 
@@ -1129,6 +1118,8 @@ fi
 echo "Finished: $(date)"
 echo "======================================="
 ```
+```
+don't know if need this anymore...
 junction_to_gene <- read.delim("junction_to_gene.tsv", header=TRUE)
 counts <- read.delim("gene_counts.txt", header=TRUE, comment.char="#")
 
@@ -1142,3 +1133,68 @@ head(counts$Geneid)
 
 # Check actual overlap
 sum(counts$Geneid %in% junction_to_gene$junction_id)
+```
+
+## now go to R interactive
+load in r: 
+```
+# --- CRYPTIC SPLICING JUNCTIONS PER MILLION ---  
+library(tidyverse)
+
+dat <- read_tsv("/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/junctions_normalized_to_RPKM.tsv")
+
+glimpse(dat)
+summary(dat)
+
+cryptic <- dat %>% filter(flag %in% c("noncanonical", "cryptic", "unknown"))
+nrow(cryptic)
+
+cryptic2 <- dat %>% filter(gene_id == "unmapped")
+nrow(cryptic2)
+```
+what this tells us: 
+> nrow(cryptic)
+[1] 3158
+> cryptic2 <- dat %>% filter(gene_id == "unmapped")
+> nrow(cryptic2)
+[1] 1035989
+
+cryptic <- dat %>% filter(flag %in% c("noncanonical", "cryptic", "unknown")) → 3158
+✅ This subset corresponds exactly to your true cryptic (noncanonical) junctions — the ones that:
+	•	Are flagged as noncanonical in the .bed file (junctions_flagged.bed)
+	•	And have no annotated gene match (gene_id == "." originally)
+
+These are the ~3,158 “true novel/cryptic events” we extracted earlier with awk.
+So this small set = your target cryptic junction list.
+
+cryptic2 <- dat %>% filter(gene_id == "unmapped") → 1,035,989
+⚠️ This large number represents everything that failed to map to any gene, not just cryptic ones.
+That includes:
+	•	True cryptic junctions (the 3,158 we care about)
+	•	Low-quality or incomplete junctions
+	•	Unannotated or intergenic junctions
+	•	Contig/assembly mismatches (since your GTF lacks GL etc.)
+	•	Potential artifacts or very low-count junctions
+
+So, this big set (cryptic2) is much broader — it contains the 3,158 cryptic junctions plus a huge background of unmapped ones that are likely irrelevant or not interpretable biologically.
+
+Continue with the 3,158 cryptic junctions for your analysis — that’s your high-confidence set.
+
+```
+#save high conf cryptic .tsv subset
+write_tsv(cryptic, "cryptic_junctions_normalized.tsv")
+
+#Compute mean or variance per sample and rank by activity
+cryptic_summary <- cryptic %>%
+  mutate(mean_JPM = rowMeans(select(., ends_with("_JPM")), na.rm = TRUE)) %>%
+  arrange(desc(mean_JPM))
+```
+
+We’ll convert your raw junction counts into Junctions Per Million (JPM) based only on total reads per sample, not gene RPKM.
+
+That way, you can:
+	•	keep all junctions (mapped + unmapped)
+	•	still compare expression levels across samples
+
+	
+CHECK R FILE AND UPDATE HERE ONCE YOU GET THAT TO WORK
