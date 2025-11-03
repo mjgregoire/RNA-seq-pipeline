@@ -39,8 +39,8 @@ for bam in ${BAM_DIR}/*.sortedByCoord.out.bam; do
     echo "Processing ${sample}..."
     samtools index $bam
 
-    # Run the correct LeafCutter extraction script
-    python ${SCRIPT_DIR}/bam2junc.sh $bam ${OUT_DIR}/${sample}
+    # ✅ call the bash script directly, not with python
+    bash ${SCRIPT_DIR}/bam2junc.sh $bam ${OUT_DIR}/${sample}
 done
 ```
 
