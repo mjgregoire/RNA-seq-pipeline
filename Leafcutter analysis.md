@@ -1,6 +1,7 @@
 # Leafcutter and analysis
 Need:
 Samtools, regtools, python3, R, leafcutter repo
+All should be under rnaseq_tools environment
 
 1. Make per-junction sample files from BAM (shell)
 ```
