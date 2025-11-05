@@ -170,12 +170,56 @@ date
 ```
 5. Run leafcutter differential splicing
 ```
-Rscript $LEAFCUTTER_DIR/leafcutter_ds.R \
-  -i /gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_clusters/perind_numers.counts.gz \
-  -g /gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_groups.txt \
-  -o /gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_ds_out \
+#!/bin/bash
+#SBATCH --job-name=leafcutter_ds
+#SBATCH --output=leafcutter_ds_%j.out
+#SBATCH --error=leafcutter_ds_%j.err
+#SBATCH --time=12:00:00
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
+#SBATCH --partition=day
+#SBATCH --mail-type=ALL
+echo "=== Starting LeafCutter differential splicing analysis ==="
+date
+echo "Running on node: $(hostname)"
+echo "Working directory: $(pwd)"
+# === 1. Clean environment ===
+module --force purge
+# ✅ Load correct R module (includes Bioconductor)
+module load R-bundle-Bioconductor/3.19-foss-2022b-R-4.4.1
+# === 2. Confirm R is loaded ===
+which Rscript
+Rscript --version
+# === 3. Define directories ===
+LEAFCUTTER_DIR=/gpfs/gibbs/pi/guo/mg2684/tools/leafcutter
+CLUSTER_DIR=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_clusters
+GROUP_FILE=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_jxns/leafcutter_groups.txt
+COV_FILE=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_jxns/leafcutter_covariates.csv
+OUT_DIR=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_ds_out
+OUT_DIR_COV=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_ds_out_cov
+mkdir -p $OUT_DIR $OUT_DIR_COV
+# === 4. Run standard LeafCutter DS analysis ===
+echo "🚀 Running standard DS analysis (no covariates)..."
+Rscript $LEAFCUTTER_DIR/scripts/leafcutter_ds.R \
+  -i $CLUSTER_DIR/leafcutter_clusters_perind_numers.counts.gz \
+  -g $GROUP_FILE \
+  -o $OUT_DIR \
   --min_samples_per_intron 3 \
   --min_reads_per_intron 10
+echo "✅ Standard DS analysis complete"
+date
+# === 5. Run covariate-adjusted LeafCutter DS analysis ===
+echo "🚀 Running covariate-adjusted DS analysis..."
+Rscript $LEAFCUTTER_DIR/scripts/leafcutter_ds.R \
+  -i $CLUSTER_DIR/leafcutter_clusters_perind_numers.counts.gz \
+  -g $GROUP_FILE \
+  -o $OUT_DIR_COV \
+  --min_samples_per_intron 3 \
+  --min_reads_per_intron 10 \
+  --covariates $COV_FILE
+echo "✅ Covariate-adjusted DS analysis complete"
+date
+echo "=== All LeafCutter DS analyses finished successfully ==="
 ```
 6. Visualize leafcutter results
 	•	LeafCutter will output cluster-level significance files you can open in R.
