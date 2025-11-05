@@ -178,6 +178,7 @@ R
 	devtools::install_github("davidaknowles/leafcutter/leafcutter")
 q()
 ```
+```
 #!/bin/bash
 #SBATCH --job-name=leafcutter_ds
 #SBATCH --output=leafcutter_ds_%j.out
@@ -187,63 +188,67 @@ q()
 #SBATCH --mem=64G
 #SBATCH --partition=day
 #SBATCH --mail-type=ALL
+
 echo "=== Starting LeafCutter differential splicing analysis ==="
 date
 echo "Running on node: $(hostname)"
 echo "Working directory: $(pwd)"
+
 # === 1. Clean environment ===
 module --force purge
 module load miniconda
-# === 2. Initialize Conda manually (robust method) ===
-if command -v conda &> /dev/null; then
-    echo "✅ Conda already available"
-else
-    echo "🔧 Initializing Conda manually..."
-    source $(module show miniconda 2>&1 | grep 'CONDA_DIR' | awk '{print $3}')/etc/profile.d/conda.
-sh 2>/dev/null || \
-    source $(conda info --base)/etc/profile.d/conda.sh 2>/dev/null || true
-fi
-# Fallback if above failed
+
+# === 2. Initialize Conda ===
 if ! command -v conda &> /dev/null; then
-    echo "⚠️ Conda still not found — trying ~/.bashrc"
+    echo "🔧 Initializing Conda manually..."
+    source $(conda info --base)/etc/profile.d/conda.sh 2>/dev/null || \
     source ~/.bashrc || true
 fi
 
 # === 3. Activate environment ===
+echo "Activating conda environment: leafcutter_R"
 conda activate leafcutter_R || { echo "❌ Failed to activate leafcutter_R"; exit 1; }
+
 # === 4. Confirm environment ===
-echo "Conda environment: $(conda info --envs | grep '*' | awk '{print $1}')"
-which python
-python --version
-# === 3. Define directories ===
+echo "✅ Environment activated: $(conda info --envs | grep '*' | awk '{print $1}')"
+which Rscript
+Rscript --version
+
+# === 5. Define directories ===
 LEAFCUTTER_DIR=/gpfs/gibbs/pi/guo/mg2684/tools/leafcutter
 CLUSTER_DIR=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_clusters
 GROUP_FILE=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_jxns/leafcutter_groups.txt
 COV_FILE=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_jxns/leafcutter_covariates.csv
 OUT_DIR=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_ds_out
 OUT_DIR_COV=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_ds_out_cov
+
 mkdir -p $OUT_DIR $OUT_DIR_COV
-# === 4. Run standard LeafCutter DS analysis ===
+
+# === 6. Run standard LeafCutter DS analysis ===
 echo "🚀 Running standard DS analysis (no covariates)..."
 Rscript $LEAFCUTTER_DIR/scripts/leafcutter_ds.R \
-  -i $CLUSTER_DIR/leafcutter_clusters_perind_numers.counts.gz \
+  -i $CLUSTER_DIR/leafcutter_clusters_perind_numbers.counts.gz \
   -g $GROUP_FILE \
   -o $OUT_DIR \
+  -p 8 \
   --min_samples_per_intron 3 \
   --min_reads_per_intron 10
 echo "✅ Standard DS analysis complete"
 date
-# === 5. Run covariate-adjusted LeafCutter DS analysis ===
+
+# === 7. Run covariate-adjusted LeafCutter DS analysis ===
 echo "🚀 Running covariate-adjusted DS analysis..."
 Rscript $LEAFCUTTER_DIR/scripts/leafcutter_ds.R \
-  -i $CLUSTER_DIR/leafcutter_clusters_perind_numers.counts.gz \
+  -i $CLUSTER_DIR/leafcutter_clusters_perind_numbers.counts.gz \
   -g $GROUP_FILE \
   -o $OUT_DIR_COV \
+  -p 8 \
   --min_samples_per_intron 3 \
   --min_reads_per_intron 10 \
   --covariates $COV_FILE
 echo "✅ Covariate-adjusted DS analysis complete"
 date
+
 echo "=== All LeafCutter DS analyses finished successfully ==="
 ```
 6. Visualize leafcutter results
