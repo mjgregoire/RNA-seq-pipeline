@@ -17,35 +17,61 @@ leafCutterDir="/gpfs/gibbs/pi/guo/mg2684/tools/leafcutter"
 #SBATCH --time=06:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-
-# === 1. Load Conda properly ===
+#SBATCH --partition=day
+set -euo pipefail
+echo "=== Starting LeafCutter junction extraction job ==="
+date
+echo "Running on node: $(hostname)"
+echo "Working directory: $(pwd)"
+# === 1. Clean environment ===
+module --force purge
 module load miniconda
-source $(conda info --base)/etc/profile.d/conda.sh
-conda activate rnaseq_tools
-
-# === 2. Define paths ===
+# === 2. Initialize Conda manually (robust method) ===
+# Use the conda init script provided by the module itself
+if command -v conda &> /dev/null; then
+    echo "✅ Conda already available"
+else
+    echo "🔧 Initializing Conda manually..."
+    source $(module show miniconda 2>&1 | grep 'CONDA_DIR' | awk '{print $3}')/etc/profile.d/conda.sh 2>/dev/null || \
+    source $(conda info --base)/etc/profile.d/conda.sh 2>/dev/null || true
+fi
+# If the above failed, try fallback to your home installation
+if ! command -v conda &> /dev/null; then
+    echo "⚠️ Conda still not found — trying ~/.bashrc"
+    source ~/.bashrc || true
+fi
+# === 3. Activate environment ===
+conda activate rnaseq_tools || { echo "❌ Failed to activate rnaseq_tools"; exit 1; }
+# === 4. Confirm environment ===
+echo "Conda environment: $(conda info --envs | grep '*' | awk '{print $1}')"
+which samtools
+samtools --version | head -n 1
+which python
+which R
+# === 5. Define paths ===
 BAM_DIR="/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output"
 OUT_DIR="/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_jxns"
 SCRIPT_DIR="/gpfs/gibbs/pi/guo/mg2684/tools/leafcutter/scripts"
-
-# === 3. Run junction extraction ===
-mkdir -p $OUT_DIR
-
+# === 6. Run junction extraction ===
+mkdir -p "$OUT_DIR"
+echo "Starting junction extraction for BAMs in: $BAM_DIR"
+echo "Output directory: $OUT_DIR"
+echo "Script directory: $SCRIPT_DIR"
+echo "----------------------------------------------------"
 for bam in ${BAM_DIR}/*.sortedByCoord.out.bam; do
-    sample=$(basename $bam .sortedByCoord.out.bam)
-    
-    # Skip empty or corrupt BAMs
+    sample=$(basename "$bam" .sortedByCoord.out.bam)
     if [ ! -s "$bam" ]; then
-        echo "Skipping empty BAM: $bam"
+        echo "⚠️ Skipping empty BAM: $bam"
         continue
     fi
-
     echo "Processing ${sample}..."
-    samtools index $bam
-
-    # ✅ call the bash script directly, not with python
-    bash ${SCRIPT_DIR}/bam2junc.sh $bam ${OUT_DIR}/${sample}
+    samtools index "$bam"
+    bash "${SCRIPT_DIR}/bam2junc.sh" "$bam" "${OUT_DIR}/${sample}.junc"
+    echo "✅ Done: ${sample}"
+    echo "----------------------------------------------------"
 done
+echo "=== All junctions processed successfully ==="
+date
 ```
 
 2. Combine per-sample junctions (one combined file)
