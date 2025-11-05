@@ -103,12 +103,6 @@ meta %>%
 conda create -n leafcutter_py2 python=2.7
 conda activate leafcutter_py2
 conda install numpy scipy pandas
-conda install -c conda-forge r-base r-optparse r-devtools
-R
-	install.packages("optparse", repos='https://cloud.r-project.org/')
-	install.packages("devtools", repos='https://cloud.r-project.org/')
-	devtools::install_github("davidaknowles/leafcutter/leafcutter")
-q()
 ```
 ```
 #!/bin/bash
@@ -176,6 +170,14 @@ date
 ```
 5. Run leafcutter differential splicing
 ```
+#make new leafcutter_R environment
+conda create -n leafcutter_R r-base=4.3.1 -y
+conda activate leafcutter_R
+conda install -c conda-forge r-devtools r-optparse r-tidyverse r-dplyr r-ggplot2 -y
+R
+	devtools::install_github("davidaknowles/leafcutter/leafcutter")
+q()
+```
 #!/bin/bash
 #SBATCH --job-name=leafcutter_ds
 #SBATCH --output=leafcutter_ds_%j.out
@@ -208,7 +210,7 @@ if ! command -v conda &> /dev/null; then
 fi
 
 # === 3. Activate environment ===
-conda activate leafcutter_py2 || { echo "❌ Failed to activate leafcutter_py2"; exit 1; }
+conda activate leafcutter_R || { echo "❌ Failed to activate leafcutter_R"; exit 1; }
 # === 4. Confirm environment ===
 echo "Conda environment: $(conda info --envs | grep '*' | awk '{print $1}')"
 which python
