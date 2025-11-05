@@ -191,11 +191,28 @@ echo "Running on node: $(hostname)"
 echo "Working directory: $(pwd)"
 # === 1. Clean environment ===
 module --force purge
-# ✅ Load correct R module (includes Bioconductor)
-module load R-bundle-Bioconductor/3.19-foss-2022b-R-4.4.1
-# === 2. Confirm R is loaded ===
-which Rscript
-Rscript --version
+module load miniconda
+# === 2. Initialize Conda manually (robust method) ===
+if command -v conda &> /dev/null; then
+    echo "✅ Conda already available"
+else
+    echo "🔧 Initializing Conda manually..."
+    source $(module show miniconda 2>&1 | grep 'CONDA_DIR' | awk '{print $3}')/etc/profile.d/conda.
+sh 2>/dev/null || \
+    source $(conda info --base)/etc/profile.d/conda.sh 2>/dev/null || true
+fi
+# Fallback if above failed
+if ! command -v conda &> /dev/null; then
+    echo "⚠️ Conda still not found — trying ~/.bashrc"
+    source ~/.bashrc || true
+fi
+
+# === 3. Activate environment ===
+conda activate leafcutter_py2 || { echo "❌ Failed to activate leafcutter_py2"; exit 1; }
+# === 4. Confirm environment ===
+echo "Conda environment: $(conda info --envs | grep '*' | awk '{print $1}')"
+which python
+python --version
 # === 3. Define directories ===
 LEAFCUTTER_DIR=/gpfs/gibbs/pi/guo/mg2684/tools/leafcutter
 CLUSTER_DIR=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_clusters
