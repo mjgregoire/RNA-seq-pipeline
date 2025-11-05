@@ -80,7 +80,7 @@ cd "$OUT_DIR"
 # Add sample name as 6th column and combine (safer)
 for f in *.junc; do
   sample=$(basename "$f" .junc)
-  awk -v s="$sample" 'BEGIN{OFS="\t"} {print $1,$2,$3,$4,$5,s}' "$f"
+  awk -v s=$sample '{print $1"\t"$2"\t"$3"\t.\t"$5"\t"$6"\t"s}' "$f"
 done > combined_juncs_with_sample.txt
 #add header
 sed -i '1ichrom\tstart\tend\tstrand\tcount\tsample_id' combined_juncs_with_sample.txt
