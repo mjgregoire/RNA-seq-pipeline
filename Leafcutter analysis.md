@@ -82,8 +82,8 @@ for f in *.junc; do
   sample=$(basename "$f" .junc)
   awk -v s="$sample" 'BEGIN{OFS="\t"} {print $1,$2,$3,$4,$5,s}' "$f"
 done > combined_juncs_with_sample.txt
-# optionally gzip
-gzip -c combined_juncs_with_sample.txt > combined_juncs_with_sample.txt.gz
+#add header
+sed -i '1ichrom\tstart\tend\tstrand\tcount\tsample_id' combined_juncs_with_sample.txt
 ```
 3. Create phenotype (groups.txt) file from metadata (R)
 ```
