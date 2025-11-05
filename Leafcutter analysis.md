@@ -175,7 +175,19 @@ conda create -n leafcutter_R r-base=4.3.1 -y
 conda activate leafcutter_R
 conda install -c conda-forge r-devtools r-optparse r-tidyverse r-dplyr r-ggplot2 -y
 R
-	devtools::install_github("davidaknowles/leafcutter/leafcutter")
+# 1️⃣ Install Bioconductor first
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager", repos="https://cloud.r-project.org")
+
+# 2️⃣ Install DirichletMultinomial from Bioconductor
+BiocManager::install("DirichletMultinomial")
+
+# 3️⃣ Install TailRank from the archived CRAN source
+install.packages("https://cran.r-project.org/src/contrib/Archive/TailRank/TailRank_1.3.0.tar.gz",
+                 repos = NULL, type = "source")
+
+# 4️⃣ Reinstall leafcutter
+devtools::install_github("davidaknowles/leafcutter", subdir="leafcutter")
 q()
 ```
 ```
