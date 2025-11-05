@@ -1198,3 +1198,49 @@ That way, you can:
 
 	
 CHECK R FILE AND UPDATE HERE ONCE YOU GET THAT TO WORK
+
+```
+library(DESeq2)
+cat("✅ DESeq2 loaded successfully\n")
+library(BiocParallel)
+
+# === Detect number of CPUs from Slurm or default to 4 ===
+num_cores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
+if (is.na(num_cores) || num_cores < 1) num_cores <- 4
+cat(paste0("🧠 Using ", num_cores, " cores for parallel DESeq2\n"))
+
+# === Use SnowParam for cluster stability ===
+register(SnowParam(num_cores, type = "SOCK"))
+
+# === Load data ===
+count_mat <- readRDS("/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/count_matrix.rds")
+meta_sub_deseq <- readRDS("/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/meta_sub_deseq.rds")
+
+# === Set factor baselines ===
+# Make sure these columns are factors and relevel appropriately
+meta_sub_deseq$developmental_stage <- factor(meta_sub_deseq$developmental_stage)
+meta_sub_deseq$disease_state <- factor(meta_sub_deseq$disease_state)
+
+# Set baselines: day21 for developmental_stage, healthy for disease_state
+meta_sub_deseq$developmental_stage <- relevel(meta_sub_deseq$developmental_stage, ref = "21 days in vitro")
+meta_sub_deseq$disease_state <- relevel(meta_sub_deseq$disease_state, ref = "Healthy control")
+
+# === DESeq2 setup ===
+dds <- DESeqDataSetFromMatrix(
+  countData = count_mat,
+  colData = meta_sub_deseq,
+  design = ~ sex + developmental_stage + disease_state + developmental_stage:disease_state
+)
+
+# === Filter low-count genes ===
+keep <- rowSums(counts(dds) >= 5) >= 2
+dds <- dds[keep, ]
+
+# === Run DESeq2 with parallelization ===
+dds <- DESeq(dds, parallel = TRUE)
+
+# === Save outputs ===
+saveRDS(dds, "/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/dds.rds")
+norm_counts <- counts(dds, normalized = TRUE)
+saveRDS(norm_counts, "/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/norm_counts.rds")
+```
