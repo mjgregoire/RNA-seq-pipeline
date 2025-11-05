@@ -174,6 +174,7 @@ date
 conda create -n leafcutter_R r-base=4.3.1 -y
 conda activate leafcutter_R
 conda install -c conda-forge r-devtools r-optparse r-tidyverse r-dplyr r-ggplot2 -y
+conda install -c conda-forge r-base=4.4.1 r-devtools r-systemfonts r-textshaping r-stringi r-pkgbuild
 R
 # 1️⃣ Install Bioconductor first
 if (!requireNamespace("BiocManager", quietly = TRUE))
