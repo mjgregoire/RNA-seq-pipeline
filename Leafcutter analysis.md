@@ -171,25 +171,15 @@ date
 5. Run leafcutter differential splicing
 ```
 #make new leafcutter_R environment
-conda create -n leafcutter_R r-base=4.3.1 -y
+conda create -n leafcutter_R -c conda-forge -c bioconda \
+  r-base=4.4.1 r-devtools r-rcpp r-rcpparmadillo r-bh r-data.table \
+  r-optparse r-ggplot2 bioconductor-dirichletmultinomial \
+  r-systemfonts r-textshaping \
+  fontconfig freetype harfbuzz fribidi libpng libtiff libjpeg-turbo -y
 conda activate leafcutter_R
-conda install -c conda-forge r-devtools r-optparse r-tidyverse r-dplyr r-ggplot2 -y
-conda install -c conda-forge r-base=4.4.1 r-devtools r-systemfonts r-textshaping r-stringi r-pkgbuild
 R
-# 1️⃣ Install Bioconductor first
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager", repos="https://cloud.r-project.org")
-BiocManager::install(version = "3.20")
-
-# 2️⃣ Install DirichletMultinomial from Bioconductor
-BiocManager::install("DirichletMultinomial")
-
-# 3️⃣ Install TailRank from the archived CRAN source
-install.packages("https://cran.r-project.org/src/contrib/Archive/TailRank/TailRank_1.3.0.tar.gz",
-                 repos = NULL, type = "source")
-
-# 4️⃣ Reinstall leafcutter
-devtools::install_github("davidaknowles/leafcutter", subdir="leafcutter")
+	install.packages("devtools")
+	devtools::install_github("davidaknowles/leafcutter", subdir = "leafcutter")
 q()
 ```
 ```
