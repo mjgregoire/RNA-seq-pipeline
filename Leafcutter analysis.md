@@ -179,9 +179,10 @@ R
 # 1️⃣ Install Bioconductor first
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager", repos="https://cloud.r-project.org")
+BiocManager::install(version = "3.20")
 
 # 2️⃣ Install DirichletMultinomial from Bioconductor
-BiocManager::install("DirichletMultinomial", version = "3.20")
+BiocManager::install("DirichletMultinomial")
 
 # 3️⃣ Install TailRank from the archived CRAN source
 install.packages("https://cran.r-project.org/src/contrib/Archive/TailRank/TailRank_1.3.0.tar.gz",
