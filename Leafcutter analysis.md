@@ -103,6 +103,12 @@ meta %>%
 conda create -n leafcutter_py2 python=2.7
 conda activate leafcutter_py2
 conda install numpy scipy pandas
+conda install -c conda-forge r-base r-optparse r-devtools
+R
+	install.packages("optparse", repos='https://cloud.r-project.org/')
+	install.packages("devtools", repos='https://cloud.r-project.org/')
+	devtools::install_github("davidaknowles/leafcutter/leafcutter")
+q()
 ```
 ```
 #!/bin/bash
