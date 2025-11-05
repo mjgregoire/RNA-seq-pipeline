@@ -98,16 +98,63 @@ meta %>%
   select(SRR, disease_state, sex, developmental_stage) %>%
   write_csv("/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_covariates.csv")
 ```
-4. Run leafcutter clustering (HPC
+4. Run leafcutter clustering (HPC) NOTE leafcutter scripts directly from the GitHub repo are python2, if your HPC is python3, they won't work, you have to go into the clusetering script manually and make python3 compatible! ex: any gzip.open(filename, 'w') needs to be 'wt', and any name = file(name) needs to be name = open(name)
 ```
-LEAFCUTTER_DIR="/home/youruser/leafcutter"   # update
-cd "$LEAFCUTTER_DIR"
+#!/bin/bash
+#SBATCH --job-name=leafcutter_cluster
+#SBATCH --output=leafcutter_cluster_%j.out
+#SBATCH --error=leafcutter_cluster_%j.err
+#SBATCH --time=12:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
+#SBATCH --partition=day
 
-# Use combined file (gzip accepted)
-python3 $LEAFCUTTER_DIR/leafcutter_cluster.py \
-  -j /gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_input_bam/combined_juncs_with_sample.txt.gz \
-  -o /gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_clusters \
-  --minclustsize 30    # optional: minimum reads per cluster; tune as needed
+echo "=== Starting LeafCutter clustering job ==="
+date
+echo "Running on node: $(hostname)"
+echo "Working directory: $(pwd)"
+# === 1. Clean environment ===
+module --force purge
+module load miniconda
+# === 2. Initialize Conda manually (robust method) ===
+# Use the conda init script provided by the module itself
+if command -v conda &> /dev/null; then
+    echo "✅ Conda already available"
+else
+    echo "🔧 Initializing Conda manually..."
+    source $(module show miniconda 2>&1 | grep 'CONDA_DIR' | awk '{print $3}')/etc/profile.d/conda.sh 2>/dev/null || \
+    source $(conda info --base)/etc/profile.d/conda.sh 2>/dev/null || true
+fi
+# If the above failed, try fallback to your home installation
+if ! command -v conda &> /dev/null; then
+    echo "⚠️ Conda still not found — trying ~/.bashrc"
+    source ~/.bashrc || true
+fi
+# === 3. Activate environment ===
+conda activate rnaseq_tools || { echo "❌ Failed to activate rnaseq_tools"; exit 1; }
+# === 4. Confirm environment ===
+echo "Conda environment: $(conda info --envs | grep '*' | awk '{print $1}')"
+
+# === 5. Define files and directories ===
+LEAFCUTTER_DIR=/gpfs/gibbs/pi/guo/mg2684/tools/leafcutter
+JUNC_FILE=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_jxns/juncfiles.txt
+OUT_DIR=/gpfs/gibbs/pi/guo/mg2684/GSE201407/leafcutter_jxns/leafcutter_clusters
+# Make sure file exists
+if [ ! -f "$JUNC_FILE" ]; then
+  echo "❌ Junction file not found: $JUNC_FILE"
+  exit 1
+fi
+
+# === 6. Run the clustering script ===
+mkdir -p $OUT_DIR
+cd $OUT_DIR
+python $LEAFCUTTER_DIR/clustering/leafcutter_cluster.py \
+  -j $JUNC_FILE \
+  -m 50 \
+
+
+
 ```
 5. Run leafcutter differential splicing
 ```
