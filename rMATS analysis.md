@@ -95,7 +95,7 @@ Now you can make sbatch script to run rmats!
 #SBATCH --job-name=rmats_ALS_vs_CTRL_D21
 #SBATCH --output=rmats_%j.out
 #SBATCH --error=rmats_%j.err
-#SBATCH --time=48:00:00
+#SBATCH --time=24:00:00
 #SBATCH --cpus-per-task=12
 #SBATCH --mem=90G
 #SBATCH --mail-type=END,FAIL
@@ -139,6 +139,5 @@ python $RMATS_PATH/rmats.py \
     --nthread 12 \
     --libType fr-firststrand \
     --variable-read-length \
-    --novelSS 1 \
-    --statoff
+    --novelSS
 ```
