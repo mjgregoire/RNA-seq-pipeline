@@ -91,6 +91,16 @@ samplesheet %>%
 ```
 Now you can make sbatch script to run rmats! --change files for each contrast you want
 ```
+#make the files ascii and unix compatible with rmats
+# Clean control list
+dos2unix /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_CTRL_D21.txt
+sed -i '/^$/d' /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_CTRL_D21.txt
+
+# Clean ALS list
+dos2unix /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_ALS_D21.txt
+sed -i '/^$/d' /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_ALS_D21.txt
+```
+```
 #!/bin/bash
 #SBATCH --job-name=rmats_ALS_vs_CTRL_D21
 #SBATCH --output=rmats_%j.out
