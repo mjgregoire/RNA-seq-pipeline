@@ -120,7 +120,7 @@ done
 #SBATCH --job-name=rmats_ALS_vs_CTRL_D21
 #SBATCH --output=rmats_%j.out
 #SBATCH --error=rmats_%j.err
-#SBATCH --time=12:00:00
+#SBATCH --time=2:00:00
 #SBATCH --cpus-per-task=12
 #SBATCH --mem=90G
 #SBATCH --mail-type=END,FAIL
@@ -128,7 +128,7 @@ done
 # -----------------------
 # Load environment
 # -----------------------
-module purge
+module --force purge
 module load rMATS-turbo/4.2.0-foss-2022b
 
 # -----------------------
@@ -139,26 +139,14 @@ ALS_LIST=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bam_files/ALS_D21_bams.
 GTF=/gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf
 OUTDIR=/gpfs/gibbs/pi/guo/mg2684/GSE201407/rMATS_analysis/rmats_ALS_vs_CTRL_D21
 
-# -----------------------
-# Prepare rMATS inputs
-# -----------------------
-B1=$(paste -sd, $CTRL_LIST)
-B2=$(paste -sd, $ALS_LIST)
-
-echo "🧠 Control BAMs:"
-echo "$B1"
-echo ""
-echo "🧬 ALS BAMs:"
-echo "$B2"
-
 mkdir -p $OUTDIR/tmp
 
 # -----------------------
 # Run rMATS
 # -----------------------
 python $(which rmats.py) \
-  --b1 "$B1" \
-  --b2 "$B2" \
+  --b1 $CTRL_LIST \
+  --b2 $ALS_LIST \
   --gtf $GTF \
   --od $OUTDIR \
   --tmp $OUTDIR/tmp \
@@ -168,15 +156,11 @@ python $(which rmats.py) \
   --variable-read-length \
   --novelSS
 
-# -----------------------
-# Optional: Check BAM existence
-# -----------------------
-echo ""
-echo "🔍 Checking that all BAM files exist..."
-for f in $(echo "$B1,$B2" | tr ',' ' '); do
-  if [[ ! -f "$f" ]]; then 
+# Optional: sanity check file existence (can remove)
+for f in $(cat $CTRL_LIST $ALS_LIST | tr ',' '\n'); do
+  if [[ ! -f "$f" ]]; then
     echo "❌ Missing: $f"
-  else 
+  else
     echo "✅ Found: $f"
   fi
 done
