@@ -155,3 +155,6 @@ python $(which rmats.py) \
   --variable-read-length \
   --novelSS
 ```
+for f in $(cat /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_CTRL_D21_fixed.txt | tr ',' ' '); do
+  if [[ ! -f "$f" ]]; then echo "❌ Missing: $f"; else echo "✅ Found: $f"; fi
+done
