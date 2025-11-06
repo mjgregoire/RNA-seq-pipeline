@@ -99,6 +99,11 @@ sed -i '/^$/d' /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_CTRL_D21.txt
 # Clean ALS list
 dos2unix /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_ALS_D21.txt
 sed -i '/^$/d' /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_ALS_D21.txt
+
+paste -sd, bams_CTRL_D21.txt > bams_CTRL_D21_fixed.txt
+paste -sd, bams_ALS_D21.txt > bams_ALS_D21_fixed.txt
+paste -sd, bams_CTRL_D21.txt > bams_CTRL_D21_fixed.txt
+paste -sd, bams_ALS_D42.txt > bams_ALS_D42_fixed.txt
 ```
 ```
 #!/bin/bash
