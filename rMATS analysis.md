@@ -89,7 +89,7 @@ samplesheet %>%
   pull(bam_path) %>%
   write_lines("/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_CTRL_D42.txt")
 ```
-Now you can make sbatch script to run rmats!
+Now you can make sbatch script to run rmats! --change files for each contrast you want
 ```
 #!/bin/bash
 #SBATCH --job-name=rmats_ALS_vs_CTRL_D21
@@ -109,35 +109,34 @@ module load rMATS-turbo/4.2.0-foss-2022b
 # -----------------------
 # Define paths
 # -----------------------
-B1=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_CTRL_D21.txt
-B2=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_ALS_D21.txt
+CTRL_LIST=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_CTRL_D21.txt
+ALS_LIST=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_ALS_D21.txt
 GTF=/gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf
 OUTDIR=/gpfs/gibbs/pi/guo/mg2684/rmats_ALS_vs_CTRL_D21
 
 # -----------------------
-# Find rMATS executable
+# Make comma-separated BAM lists (rMATS prefers this format)
 # -----------------------
-# This locates rmats.py on your system after loading the module
-RMATS_PATH=$(dirname $(which rmats.py))
-echo "rMATS path: $RMATS_PATH"
+B1=$(paste -sd, $CTRL_LIST)
+B2=$(paste -sd, $ALS_LIST)
 
-# -----------------------
-# Create output directory
-# -----------------------
+echo "Control BAMs: $B1"
+echo "ALS BAMs: $B2"
+
 mkdir -p $OUTDIR/tmp
 
 # -----------------------
 # Run rMATS
 # -----------------------
-python $RMATS_PATH/rmats.py \
-    --b1 $B1 \
-    --b2 $B2 \
-    --gtf $GTF \
-    --od $OUTDIR \
-    --tmp $OUTDIR/tmp \
-    --readLength 150 \
-    --nthread 12 \
-    --libType fr-firststrand \
-    --variable-read-length \
-    --novelSS
+python $(which rmats.py) \
+  --b1 "$B1" \
+  --b2 "$B2" \
+  --gtf $GTF \
+  --od $OUTDIR \
+  --tmp $OUTDIR/tmp \
+  --readLength 150 \
+  --nthread 12 \
+  --libType fr-firststrand \
+  --variable-read-length \
+  --novelSS
 ```
