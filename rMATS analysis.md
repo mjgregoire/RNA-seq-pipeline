@@ -105,12 +105,22 @@ paste -sd, bams_ALS_D21.txt > bams_ALS_D21_fixed.txt
 paste -sd, bams_CTRL_D21.txt > bams_CTRL_D21_fixed.txt
 paste -sd, bams_ALS_D42.txt > bams_ALS_D42_fixed.txt
 ```
+neither of those worked with rmats so move bam files into folder and then try making file name in command line: 
+```
+#use code like this and repeat for all samples
+mkdir -p /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bam_files/ALS_D42
+
+for srr in SRR18907546 SRR18907547 SRR18907548 SRR18907549 SRR18907550 SRR18907551; do
+  cp /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bam_files/${srr}_Aligned.sortedByCoord.out.bam \
+     /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bam_files/ALS_D42/
+done
+```
 ```
 #!/bin/bash
 #SBATCH --job-name=rmats_ALS_vs_CTRL_D21
 #SBATCH --output=rmats_%j.out
 #SBATCH --error=rmats_%j.err
-#SBATCH --time=24:00:00
+#SBATCH --time=12:00:00
 #SBATCH --cpus-per-task=12
 #SBATCH --mem=90G
 #SBATCH --mail-type=END,FAIL
@@ -124,10 +134,10 @@ module load rMATS-turbo/4.2.0-foss-2022b
 # -----------------------
 # Define paths
 # -----------------------
-CTRL_LIST=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_CTRL_D21.txt
-ALS_LIST=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_ALS_D21.txt
+CTRL_LIST=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bam_files/CTRL_D21_bams.txt
+ALS_LIST=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bam_files/ALS_D21_bams.txt
 GTF=/gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf
-OUTDIR=/gpfs/gibbs/pi/guo/mg2684/rmats_ALS_vs_CTRL_D21
+OUTDIR=/gpfs/gibbs/pi/guo/mg2684/GSE201407/rMATS_analysis/rmats_ALS_vs_CTRL_D21
 
 # -----------------------
 # Make comma-separated BAM lists (rMATS prefers this format)
