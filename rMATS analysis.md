@@ -95,10 +95,10 @@ Now you can make sbatch script to run rmats!
 #SBATCH --job-name=rmats_ALS_vs_CTRL_D21
 #SBATCH --output=rmats_%j.out
 #SBATCH --error=rmats_%j.err
-#SBATCH --time=48:00:00           # up to 2 days
-#SBATCH --cpus-per-task=12        # 12 CPU cores
-#SBATCH --mem=90G                 # 90 GB memory
-#SBATCH --mail-type=END,FAIL      
+#SBATCH --time=48:00:00
+#SBATCH --cpus-per-task=12
+#SBATCH --mem=90G
+#SBATCH --mail-type=END,FAIL
 
 # -----------------------
 # Load environment
@@ -107,12 +107,19 @@ module purge
 module load rMATS-turbo/4.2.0-foss-2022b
 
 # -----------------------
-# Define inputs / outputs
+# Define paths
 # -----------------------
 B1=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_CTRL_D21.txt
 B2=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_ALS_D21.txt
 GTF=/gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf
 OUTDIR=/gpfs/gibbs/pi/guo/mg2684/rmats_ALS_vs_CTRL_D21
+
+# -----------------------
+# Find rMATS executable
+# -----------------------
+# This locates rmats.py on your system after loading the module
+RMATS_PATH=$(dirname $(which rmats.py))
+echo "rMATS path: $RMATS_PATH"
 
 # -----------------------
 # Create output directory
@@ -122,7 +129,7 @@ mkdir -p $OUTDIR/tmp
 # -----------------------
 # Run rMATS
 # -----------------------
-python $EBROOTRMATS_TURBO/rmats.py \
+python $RMATS_PATH/rmats.py \
     --b1 $B1 \
     --b2 $B2 \
     --gtf $GTF \
