@@ -140,13 +140,16 @@ GTF=/gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf
 OUTDIR=/gpfs/gibbs/pi/guo/mg2684/GSE201407/rMATS_analysis/rmats_ALS_vs_CTRL_D21
 
 # -----------------------
-# Make comma-separated BAM lists (rMATS prefers this format)
+# Prepare rMATS inputs
 # -----------------------
 B1=$(paste -sd, $CTRL_LIST)
 B2=$(paste -sd, $ALS_LIST)
 
-echo "Control BAMs: $B1"
-echo "ALS BAMs: $B2"
+echo "🧠 Control BAMs:"
+echo "$B1"
+echo ""
+echo "🧬 ALS BAMs:"
+echo "$B2"
 
 mkdir -p $OUTDIR/tmp
 
@@ -164,7 +167,17 @@ python $(which rmats.py) \
   --libType fr-firststrand \
   --variable-read-length \
   --novelSS
-```
-for f in $(cat /gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bams_CTRL_D21_fixed.txt | tr ',' ' '); do
-  if [[ ! -f "$f" ]]; then echo "❌ Missing: $f"; else echo "✅ Found: $f"; fi
+
+# -----------------------
+# Optional: Check BAM existence
+# -----------------------
+echo ""
+echo "🔍 Checking that all BAM files exist..."
+for f in $(echo "$B1,$B2" | tr ',' ' '); do
+  if [[ ! -f "$f" ]]; then 
+    echo "❌ Missing: $f"
+  else 
+    echo "✅ Found: $f"
+  fi
 done
+```
