@@ -255,6 +255,10 @@ date
 
 echo "=== All LeafCutter DS analyses finished successfully ==="
 ```
+
+COULD NOT GET LEAFCUTTER R DEPENDENCIES TO DOWNLOAD FROM THE GITHUB...
+
+
 6. Visualize leafcutter results
 	•	LeafCutter will output cluster-level significance files you can open in R.
 	•	For sashimi-style validation you need BAMs — now that you used BAMs, you can plot reads across the junction region in IGV or use ggsashimi/leafcutter plotting helpers. I can produce a sashimi job script for the top clusters if you want.
