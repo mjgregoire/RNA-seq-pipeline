@@ -165,3 +165,53 @@ for f in $(cat $CTRL_LIST $ALS_LIST | tr ',' '\n'); do
   fi
 done
 ```
+```
+#!/bin/bash
+#SBATCH --job-name=rmats_ALS_vs_CTRL_D21
+#SBATCH --output=rmats_%j.out
+#SBATCH --error=rmats_%j.err
+#SBATCH --time=2:00:00
+#SBATCH --cpus-per-task=12
+#SBATCH --mem=90G
+#SBATCH --mail-type=END,FAIL
+
+# -----------------------
+# Load environment
+# -----------------------
+module --force purge
+module load rMATS-turbo/4.2.0-foss-2022b
+
+# -----------------------
+# Define paths
+# -----------------------
+ALS_LIST1=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bam_files/ALS_D21_bams.txt
+ALS_LIST2=/gpfs/gibbs/pi/guo/mg2684/GSE201407/star_output/bam_files/ALS_D42_bams.txt
+GTF=/gpfs/gibbs/pi/guo/mg2684/reference/gencode/gencode.v43.annotation.gtf
+OUTDIR=/gpfs/gibbs/pi/guo/mg2684/GSE201407/rMATS_analysis/rmats_ALS_D42_vs_ALS_D21
+
+mkdir -p $OUTDIR/tmp
+
+# -----------------------
+# Run rMATS
+# -----------------------
+python $(which rmats.py) \
+  --b1 $ALS_LIST1 \
+  --b2 $ALS_LIST2 \
+  --gtf $GTF \
+  --od $OUTDIR \
+  --tmp $OUTDIR/tmp \
+  --readLength 150 \
+  --nthread 12 \
+  --libType fr-firststrand \
+  --variable-read-length \
+  --novelSS
+
+# Optional: sanity check file existence (can remove)
+for f in $(cat $ALS_LIST1 $ALS_LIST2 | tr ',' '\n'); do
+  if [[ ! -f "$f" ]]; then
+    echo "❌ Missing: $f"
+  else
+    echo "✅ Found: $f"
+  fi
+done
+```
