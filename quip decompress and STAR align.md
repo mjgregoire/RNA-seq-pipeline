@@ -237,3 +237,66 @@ samtools index "$BAM"
 
 echo "Completed sample: $SAMPLE_NAME"
 ```
+```
+#!/bin/bash
+#SBATCH -J quip_decompress
+#SBATCH -p day
+#SBATCH -N 1
+#SBATCH -n 4
+#SBATCH --mem=32G
+#SBATCH -t 48:00:00
+#SBATCH -o quip_%A_%a.out
+#SBATCH -e quip_%A_%a.err
+
+module --force purge
+module load StdEnv
+module load GCCcore/10.2.0
+module load Quip/20171217-GCCcore-10.2.0
+
+BASE_DIR="/gpfs/gibbs/pi/guo/mg2684/ATXN2_mouse"
+
+# Find all Unaligned directories
+SAMPLE_DIRS=($(find "$BASE_DIR" -type d -name Unaligned | sort))
+NUM_SAMPLES=${#SAMPLE_DIRS[@]}
+
+echo "Found $NUM_SAMPLES Unaligned directories"
+
+# Must be run as an array
+if [[ -z "$SLURM_ARRAY_TASK_ID" ]]; then
+    echo "Run as: sbatch --array=0-$((NUM_SAMPLES-1)) $0"
+    exit 1
+fi
+
+UNALIGNED="${SAMPLE_DIRS[$SLURM_ARRAY_TASK_ID]}"
+SAMPLE_NAME=$(basename "$(dirname "$UNALIGNED")")
+
+echo "Decompressing QP files for sample $SAMPLE_NAME"
+echo "Folder: $UNALIGNED"
+
+QP_FILES=($(ls "$UNALIGNED"/*.fastq.qp 2>/dev/null))
+
+if (( ${#QP_FILES[@]} == 0 )); then
+    echo "No QP files found."
+    exit 0
+fi
+
+for qp in "${QP_FILES[@]}"; do
+    fq="${qp%.qp}"
+
+    if [[ -f "$fq" ]]; then
+        echo "FASTQ already exists: $fq (skipping)"
+        continue
+    fi
+
+    echo "Running: quip -d $qp"
+    quip -d "$qp"
+
+    echo "Checking FASTQ integrity..."
+    awk '(NR%4==1 && substr($0,1,1)!="@") || (NR%4==3 && substr($0,1,1)!="+") {print "BAD"; exit}' "$fq" \
+        && echo "ERROR: $fq is not valid FASTQ" && exit 1
+done
+
+touch "$UNALIGNED/.DECOMPRESS_DONE"
+
+echo "✓ Completed sample $SAMPLE_NAME"
+```
