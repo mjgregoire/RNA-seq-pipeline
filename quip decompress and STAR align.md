@@ -32,3 +32,4 @@ done
 
 touch "$DIR/.DECOMPRESS_DONE"
 ```
+`sbatch --array=0-18 quip_decompress.sh`
