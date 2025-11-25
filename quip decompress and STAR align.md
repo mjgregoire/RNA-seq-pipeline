@@ -33,3 +33,69 @@ done
 touch "$DIR/.DECOMPRESS_DONE"
 ```
 `sbatch --array=0-18 quip_decompress.sh`
+
+
+```
+#!/bin/bash
+#SBATCH -J star_align
+#SBATCH -p day
+#SBATCH -N 1
+#SBATCH -n 8
+#SBATCH --mem=60G
+#SBATCH -t 24:00:00
+#SBATCH -o star_%A_%a.out
+#SBATCH -e star_%A_%a.err
+#SBATCH --mail-type=ALL
+
+module --force purge
+module load StdEnv
+module load STAR/2.7.11a-GCC-12.2.0
+module load SAMtools/1.21-GCC-12.2.0
+
+BASE_DIR="/gpfs/gibbs/pi/guo/mg2684/ATXN2_mouse"
+GENOME_DIR="/gpfs/gibbs/pi/guo/mg2684/reference/STAR_index_GRCh38"
+OUT_DIR="/gpfs/gibbs/pi/guo/mg2684/ATXN2_mouse/star_out"
+mkdir -p "$OUT_DIR"
+
+# Find all Unaligned directories
+SAMPLE_DIRS=($(find "$BASE_DIR" -type d -name Unaligned | sort))
+NUM_SAMPLES=${#SAMPLE_DIRS[@]}
+echo "Detected $NUM_SAMPLES sample folders"
+
+if [[ -z "$SLURM_ARRAY_TASK_ID" ]]; then
+    echo "Run as:"
+    echo "  sbatch --array=0-$((NUM_SAMPLES-1)) $0"
+    exit 1
+fi
+
+UNALIGNED="${SAMPLE_DIRS[$SLURM_ARRAY_TASK_ID]}"
+SAMPLE_NAME=$(basename "$(dirname "$UNALIGNED")")
+
+# Find only .fastq or .fastq.gz files (exclude .fastq.qp)
+FASTQS=($(find "$UNALIGNED" -maxdepth 1 -type f \( -name "*.fastq" -o -name "*.fastq.gz" \) | sort))
+
+if (( ${#FASTQS[@]} == 1 )); then
+    FASTQ_CMD="--readFilesIn ${FASTQS[0]}"
+elif (( ${#FASTQS[@]} == 2 )); then
+    FASTQ_CMD="--readFilesIn ${FASTQS[0]} ${FASTQS[1]}"
+else
+    echo "ERROR: expected 1 or 2 FASTQs, found ${#FASTQS[@]} in $UNALIGNED"
+    exit 1
+fi
+
+# STAR decompression command only for gz files
+READ_FILES_COMMAND=""
+if [[ "${FASTQS[0]}" == *.gz ]]; then
+    READ_FILES_COMMAND="--readFilesCommand zcat"
+fi
+
+STAR \
+    --runThreadN 8 \
+    --genomeDir "$GENOME_DIR" \
+    $FASTQ_CMD \
+    $READ_FILES_COMMAND \
+    --outFileNamePrefix "$OUT_DIR/${SAMPLE_NAME}_" \
+    --outSAMtype BAM SortedByCoordinate
+
+samtools index "$OUT_DIR/${SAMPLE_NAME}_Aligned.sortedByCoord.out.bam"
+```
