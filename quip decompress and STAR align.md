@@ -1,38 +1,54 @@
 
 ```
 #!/bin/bash
-#SBATCH -J quip_decompress
+#SBATCH -J quip_to_gzip
 #SBATCH -p day
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH --mem=8G
 #SBATCH -t 24:00:00
-#SBATCH -o quip_%A_%a.out
-#SBATCH -e quip_%A_%a.err
+#SBATCH -o quip_to_gzip_%j.out
+#SBATCH -e quip_to_gzip_%j.err
 
+set -euo pipefail
+
+# Load the modules needed for Quip
 module --force purge
 module load StdEnv
 module load GCCcore/10.2.0
 module load Quip/20171217-GCCcore-10.2.0
 
-BASE_DIR="/gpfs/gibbs/pi/guo/mg2684/ATXN2_mouse"
+BASE="/gpfs/gibbs/pi/guo/mg2684/ATXN2_mouse"
 
-SAMPLE_DIRS=($(find "$BASE_DIR" -type d -name Unaligned | sort))
-NUM=${#SAMPLE_DIRS[@]}
+echo "========= Starting Quip → Gzip conversion ========="
+echo "Time: $(date)"
+echo "Base directory: $BASE"
+echo "---------------------------------------------------"
 
-DIR="${SAMPLE_DIRS[$SLURM_ARRAY_TASK_ID]}"
+# Find all .fastq.qp files
+mapfile -t QP_FILES < <(find "$BASE" -type f -name "*.fastq.qp" | sort)
 
-echo "Decompressing in: $DIR"
+echo "Found ${#QP_FILES[@]} .fastq.qp files to convert."
 
-for qp in "$DIR"/*.qp; do
-    out="${qp%.qp}"
-    echo "quip -d $qp"
-    quip -d "$qp"
+for qp in "${QP_FILES[@]}"; do
+    out="${qp%.fastq.qp}.fastq.gz"
+    echo "Processing:"
+    echo "  QP : $qp"
+    echo "  OUT: $out"
+
+    # Decompress and gzip in one step
+    quip -d "$qp" | gzip > "$out"
+
+    # Optional: remove the old qp file only after success
+    # rm "$qp"
+
+    echo "  ✔ Done"
+    echo "---------------------------------------------------"
 done
 
-touch "$DIR/.DECOMPRESS_DONE"
+echo "========= Finished at $(date) ========="
 ```
-`sbatch --array=0-18 quip_decompress.sh`
+`sbatch quip_to_gzip.sh`
 
 
 ```
