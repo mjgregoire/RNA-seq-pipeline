@@ -73,9 +73,10 @@ GENOME_DIR="/gpfs/gibbs/pi/guo/mg2684/reference/STAR_index_GRCh38"
 OUT_DIR="/gpfs/gibbs/pi/guo/mg2684/ATXN2_mouse/star_out"
 mkdir -p "$OUT_DIR"
 
-# Find all Unaligned directories
+# Identify Unaligned dirs
 SAMPLE_DIRS=($(find "$BASE_DIR" -type d -name Unaligned | sort))
 NUM_SAMPLES=${#SAMPLE_DIRS[@]}
+
 echo "Detected $NUM_SAMPLES sample folders"
 
 if [[ -z "$SLURM_ARRAY_TASK_ID" ]]; then
@@ -87,23 +88,27 @@ fi
 UNALIGNED="${SAMPLE_DIRS[$SLURM_ARRAY_TASK_ID]}"
 SAMPLE_NAME=$(basename "$(dirname "$UNALIGNED")")
 
-# Find only .fastq or .fastq.gz files (exclude .fastq.qp)
-FASTQS=($(find "$UNALIGNED" -maxdepth 1 -type f \( -name "*.fastq" -o -name "*.fastq.gz" \) | sort))
+# Only use fastq.gz files — ignore plain FASTQ and QP files
+FASTQS=($(find "$UNALIGNED" -maxdepth 1 -type f -name "*.fastq.gz" | sort))
 
-if (( ${#FASTQS[@]} == 1 )); then
+if (( ${#FASTQS[@]} == 0 )); then
+    echo "ERROR: No .fastq.gz files found in $UNALIGNED"
+    exit 1
+elif (( ${#FASTQS[@]} == 1 )); then
     FASTQ_CMD="--readFilesIn ${FASTQS[0]}"
 elif (( ${#FASTQS[@]} == 2 )); then
     FASTQ_CMD="--readFilesIn ${FASTQS[0]} ${FASTQS[1]}"
 else
-    echo "ERROR: expected 1 or 2 FASTQs, found ${#FASTQS[@]} in $UNALIGNED"
+    echo "ERROR: Expected 1 or 2 FASTQs, found ${#FASTQS[@]} in $UNALIGNED"
     exit 1
 fi
 
-# STAR decompression command only for gz files
-READ_FILES_COMMAND=""
-if [[ "${FASTQS[0]}" == *.gz ]]; then
-    READ_FILES_COMMAND="--readFilesCommand zcat"
-fi
+# Required for gzipped input
+READ_FILES_COMMAND="--readFilesCommand zcat"
+
+echo "Running STAR for sample: $SAMPLE_NAME"
+echo "FASTQs:"
+printf "  %s\n" "${FASTQS[@]}"
 
 STAR \
     --runThreadN 8 \
@@ -111,7 +116,9 @@ STAR \
     $FASTQ_CMD \
     $READ_FILES_COMMAND \
     --outFileNamePrefix "$OUT_DIR/${SAMPLE_NAME}_" \
-    --outSAMtype BAM SortedByCoordinate
+    --outSAMtype BAM SortedByCoordinate \
+    --limitBAMsortRAM 55000000000
 
+# Index BAM
 samtools index "$OUT_DIR/${SAMPLE_NAME}_Aligned.sortedByCoord.out.bam"
 ```
